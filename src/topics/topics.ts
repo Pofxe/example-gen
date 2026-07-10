@@ -1,0 +1,60 @@
+import type { TopicInfo } from '../types';
+
+export const TOPICS: TopicInfo[] = [
+  {
+    id: 'arithmetic',
+    title: 'Арифметика',
+    description: 'Сложение, вычитание, умножение и деление',
+    icon: '➕',
+    available: true,
+    path: '/topic/arithmetic',
+  },
+  {
+    id: 'fractions',
+    title: 'Дроби',
+    description: 'Обыкновенные и десятичные дроби, смешанные числа',
+    icon: '½',
+    available: true,
+    path: '/topic/fractions',
+  },
+  {
+    id: 'percentages',
+    title: 'Проценты',
+    description: 'Нахождение процентов и процентных отношений',
+    icon: '%',
+    available: false,
+    path: '/topic/percentages',
+  },
+  {
+    id: 'powers',
+    title: 'Степени',
+    description: 'Возведение в степень и свойства степеней',
+    icon: 'x²',
+    available: false,
+    path: '/topic/powers',
+  },
+  {
+    id: 'roots',
+    title: 'Корни',
+    description: 'Квадратные и кубические корни',
+    icon: '√',
+    available: false,
+    path: '/topic/roots',
+  },
+  {
+    id: 'linear-equations',
+    title: 'Линейные уравнения',
+    description: 'Уравнения вида ax + b = c',
+    icon: '𝑥',
+    available: false,
+    path: '/topic/linear-equations',
+  },
+  {
+    id: 'quadratic-equations',
+    title: 'Квадратные уравнения',
+    description: 'Уравнения вида ax² + bx + c = 0',
+    icon: '𝑥²',
+    available: false,
+    path: '/topic/quadratic-equations',
+  },
+];
