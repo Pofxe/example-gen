@@ -90,6 +90,13 @@ function countFlatOps(part: FlatPart): number {
   return part.operations.length;
 }
 
+function validateAnswer(answer: number, settings: ArithmeticSettings): ValidationResult {
+  if (!settings.allowNegativeAnswer && answer < 0) {
+    return { valid: false, reason: 'Ответ отрицательный' };
+  }
+  return { valid: true };
+}
+
 export function validateArithmeticProblem(
   problem: ArithmeticProblem,
   settings: ArithmeticSettings,
@@ -112,6 +119,9 @@ export function validateArithmeticProblem(
     if (computed !== answer) {
       return { valid: false, reason: 'Ответ не совпадает с вычислением' };
     }
+
+    const answerCheck = validateAnswer(answer, settings);
+    if (!answerCheck.valid) return answerCheck;
 
     return { valid: true };
   }
@@ -156,6 +166,9 @@ export function validateArithmeticProblem(
     if (combined !== answer) {
       return { valid: false, reason: 'Ответ не совпадает с вычислением' };
     }
+
+    const answerCheck = validateAnswer(answer, settings);
+    if (!answerCheck.valid) return answerCheck;
 
     if (!settings.useParentheses) {
       return { valid: false, reason: 'Скобки не разрешены' };

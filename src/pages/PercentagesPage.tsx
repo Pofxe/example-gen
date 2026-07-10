@@ -2,12 +2,12 @@ import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
 import {
-  DEFAULT_FRACTION_SETTINGS,
-  FRACTION_MODES,
-  fractionModeSupportsOperationsCount,
-  type FractionMode,
-  type FractionSettings,
-} from '../topics/fractions/types';
+  DEFAULT_PERCENT_SETTINGS,
+  PERCENT_MODES,
+  percentModeSupportsOperationsCount,
+  type PercentMode,
+  type PercentSettings,
+} from '../topics/percentages/types';
 import type { AnswerStatus, ProblemSession } from '../types';
 
 const EMPTY_SESSION: ProblemSession = {
@@ -18,14 +18,14 @@ const EMPTY_SESSION: ProblemSession = {
   answerStatuses: {},
 };
 
-export function FractionsPage() {
-  const [settings, setSettings] = useState<FractionSettings>(DEFAULT_FRACTION_SETTINGS);
+export function PercentagesPage() {
+  const [settings, setSettings] = useState<PercentSettings>(DEFAULT_PERCENT_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
-  const updateSetting = <K extends keyof FractionSettings>(
+  const updateSetting = <K extends keyof PercentSettings>(
     key: K,
-    value: FractionSettings[K],
+    value: PercentSettings[K],
   ) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
@@ -33,8 +33,17 @@ export function FractionsPage() {
   const handleGenerate = async () => {
     setGenerateError(null);
 
-    const { generateFractionProblems } = await import('../topics/fractions/generator');
-    const problems = generateFractionProblems(settings);
+    if (settings.minPercent > settings.maxPercent) {
+      setGenerateError('Минимальный процент не может быть больше максимального');
+      return;
+    }
+    if (settings.minNumber > settings.maxNumber) {
+      setGenerateError('Минимум числа не может быть больше максимума');
+      return;
+    }
+
+    const { generatePercentProblems } = await import('../topics/percentages/generator');
+    const problems = generatePercentProblems(settings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -53,13 +62,13 @@ export function FractionsPage() {
   };
 
   const handleAnswer = useCallback(async (problemId: string, value: string) => {
-    const { checkFractionProblemAnswer } = await import('../topics/fractions/checker');
+    const { checkPercentProblemAnswer } = await import('../topics/percentages/checker');
 
     setSession((prev) => {
       const problem = prev.problems.find((p) => p.id === problemId);
       if (!problem || prev.answerStatuses[problemId]) return prev;
 
-      const isCorrect = checkFractionProblemAnswer(problem, value);
+      const isCorrect = checkPercentProblemAnswer(problem, value);
       const status: AnswerStatus = isCorrect ? 'correct' : 'incorrect';
 
       return {
@@ -82,9 +91,9 @@ export function FractionsPage() {
       </Link>
 
       <header className="page-header">
-        <h1>Дроби</h1>
+        <h1>Проценты</h1>
         <p className="page-header__subtitle">
-          Обыкновенные и десятичные дроби, смешанные числа
+          Нахождение процентов, чисел и преобразования
         </p>
       </header>
 
@@ -96,9 +105,9 @@ export function FractionsPage() {
           <select
             className="setting-select"
             value={settings.mode}
-            onChange={(e) => updateSetting('mode', e.target.value as FractionMode)}
+            onChange={(e) => updateSetting('mode', e.target.value as PercentMode)}
           >
-            {FRACTION_MODES.map((m) => (
+            {PERCENT_MODES.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.group} — {m.label}
               </option>
@@ -110,7 +119,7 @@ export function FractionsPage() {
           <label className="setting-field">
             <span className="setting-field__label">
               Количество действий: <strong>{settings.operationsCount}</strong>
-              {!fractionModeSupportsOperationsCount(settings.mode) && (
+              {!percentModeSupportsOperationsCount(settings.mode) && (
                 <span className="setting-hint"> (недоступно для этого типа)</span>
               )}
             </span>
@@ -120,7 +129,7 @@ export function FractionsPage() {
               max={10}
               step={1}
               value={settings.operationsCount}
-              disabled={!fractionModeSupportsOperationsCount(settings.mode)}
+              disabled={!percentModeSupportsOperationsCount(settings.mode)}
               onChange={(e) => updateSetting('operationsCount', Number(e.target.value))}
             />
           </label>
@@ -139,40 +148,47 @@ export function FractionsPage() {
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Макс. знаменатель</span>
+            <span className="setting-field__label">Мин. процент (%)</span>
             <input
               type="number"
-              min={2}
-              max={50}
-              value={settings.maxDenominator}
+              min={1}
+              max={200}
+              value={settings.minPercent}
               onChange={(e) =>
-                updateSetting('maxDenominator', Math.max(2, Math.min(50, Number(e.target.value))))
+                updateSetting('minPercent', Math.max(1, Math.min(200, Number(e.target.value))))
               }
             />
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Макс. числитель</span>
+            <span className="setting-field__label">Макс. процент (%)</span>
             <input
               type="number"
               min={1}
-              max={50}
-              value={settings.maxNumerator}
+              max={200}
+              value={settings.maxPercent}
               onChange={(e) =>
-                updateSetting('maxNumerator', Math.max(1, Math.min(50, Number(e.target.value))))
+                updateSetting('maxPercent', Math.max(1, Math.min(200, Number(e.target.value))))
               }
             />
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Макс. целая часть</span>
+            <span className="setting-field__label">Мин. число</span>
             <input
               type="number"
-              min={1}
-              max={20}
-              value={settings.maxWhole}
+              value={settings.minNumber}
+              onChange={(e) => updateSetting('minNumber', Number(e.target.value))}
+            />
+          </label>
+
+          <label className="setting-field">
+            <span className="setting-field__label">Макс. число</span>
+            <input
+              type="number"
+              value={settings.maxNumber}
               onChange={(e) =>
-                updateSetting('maxWhole', Math.max(1, Math.min(20, Number(e.target.value))))
+                updateSetting('maxNumber', Number(e.target.value))
               }
             />
           </label>
@@ -181,11 +197,11 @@ export function FractionsPage() {
             <span className="setting-field__label">Знаков после запятой</span>
             <input
               type="number"
-              min={1}
-              max={4}
+              min={0}
+              max={3}
               value={settings.decimalPlaces}
               onChange={(e) =>
-                updateSetting('decimalPlaces', Math.max(1, Math.min(4, Number(e.target.value))))
+                updateSetting('decimalPlaces', Math.max(0, Math.min(3, Number(e.target.value))))
               }
             />
           </label>
@@ -209,9 +225,18 @@ export function FractionsPage() {
           <span>Отрицательный ответ</span>
         </label>
 
+        <label className="setting-checkbox">
+          <input
+            type="checkbox"
+            checked={settings.allowDecimalPercent}
+            onChange={(e) => updateSetting('allowDecimalPercent', e.target.checked)}
+          />
+          <span>Дробные проценты (например, 12,5%)</span>
+        </label>
+
         <p className="settings-panel__hint">
-          Формат ответа: <code>3/4</code> или <code>2 3/4</code> (целое, пробел, числитель/знаменатель).
-          Для сравнения: <code>&lt;</code>, <code>&gt;</code> или <code>=</code>.
+          Для ответа в процентах вводите число без знака % (например, <code>25</code>).
+          Для дроби — <code>1/4</code>.
         </p>
 
         <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>

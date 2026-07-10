@@ -9,6 +9,7 @@ import {
 } from './evaluator';
 import type { ArithmeticProblem, FlatPart } from './validator';
 import { validateArithmeticProblem } from './validator';
+import { fillUniqueProblems } from '../../utils/problemSignature';
 
 const MAX_ATTEMPTS_PER_PROBLEM = 3000;
 const BUILD_RETRIES = 80;
@@ -121,10 +122,9 @@ function toProblem(problem: ArithmeticProblem, id: string): Problem {
   };
 }
 
-function generateSingleProblem(
-  settings: ArithmeticSettings,
-  index: number,
-): Problem | null {
+let problemCounter = 0;
+
+function generateOneArithmetic(settings: ArithmeticSettings): Problem | null {
   for (let attempt = 0; attempt < MAX_ATTEMPTS_PER_PROBLEM; attempt++) {
     for (let buildTry = 0; buildTry < BUILD_RETRIES; buildTry++) {
       const candidate = tryBuild(settings);
@@ -133,7 +133,7 @@ function generateSingleProblem(
 
       return toProblem(
         candidate,
-        `arith-${index}-${Date.now()}-${attempt}-${buildTry}`,
+        `arith-${++problemCounter}-${Date.now()}-${attempt}-${buildTry}`,
       );
     }
   }
@@ -141,12 +141,5 @@ function generateSingleProblem(
 }
 
 export function generateArithmeticProblems(settings: ArithmeticSettings): Problem[] {
-  const problems: Problem[] = [];
-
-  for (let i = 0; i < settings.problemsCount; i++) {
-    const problem = generateSingleProblem(settings, i);
-    if (problem) problems.push(problem);
-  }
-
-  return problems;
+  return fillUniqueProblems(settings.problemsCount, () => generateOneArithmetic(settings));
 }

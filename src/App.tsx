@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { ArithmeticPage } from './pages/ArithmeticPage';
 import { FractionsPage } from './pages/FractionsPage';
+import { PercentagesPage } from './pages/PercentagesPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
 
@@ -14,6 +15,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/topic/arithmetic" element={<ArithmeticPage />} />
             <Route path="/topic/fractions" element={<FractionsPage />} />
+            <Route path="/topic/percentages" element={<PercentagesPage />} />
             <Route
               path="*"
               element={

@@ -1,5 +1,6 @@
 import type { Problem, ExprPart } from '../../types';
 import type { FractionSettings, FractionMode } from './types';
+import { fractionModeSupportsOperationsCount } from './types';
 import type { Frac, FracOp, Mixed } from './math';
 import {
   randomInt,
@@ -14,25 +15,55 @@ import {
   applyFracOp,
   applyDecimalOp,
   roundDecimal,
-  gcd,
 } from './math';
 import {
   formatFracAnswer,
   formatComparisonAnswer,
   formatCommonDenomAnswer,
 } from './format';
+import { fillUniqueProblems } from '../../utils/problemSignature';
 
-function fracPart(f: Frac, whole?: number): ExprPart {
+let fractionProblemCounter = 0;
+
+function isAnswerAllowed(problem: Problem, settings: FractionSettings): boolean {
+  if (settings.allowNegativeAnswer || !problem.check) return true;
+
+  switch (problem.check.kind) {
+    case 'compare':
+    case 'common-denom':
+      return true;
+    case 'integer':
+      return problem.check.value >= 0;
+    case 'frac':
+      return problem.check.value.num >= 0;
+    case 'decimal':
+      return problem.check.value >= 0;
+    default:
+      return true;
+  }
+}
+
+function fracPart(f: Frac, options?: { whole?: number; asImproper?: boolean }): ExprPart {
+  const whole = options?.whole;
+  const asImproper = options?.asImproper ?? false;
+
   if (whole !== undefined) {
     return { kind: 'frac', num: f.num, den: f.den, whole };
   }
-  const m = toMixed(f);
-  if (m.whole !== 0 && m.num !== 0) {
-    return { kind: 'frac', num: m.num, den: m.den, whole: m.whole };
+
+  const absNum = Math.abs(f.num);
+  const den = f.den;
+
+  if (!asImproper && absNum >= den) {
+    const m = toMixed(f);
+    if (m.whole !== 0 && m.num !== 0) {
+      return { kind: 'frac', num: m.num, den: m.den, whole: m.whole };
+    }
+    if (m.whole !== 0 && m.num === 0) {
+      return { kind: 'text', text: String(m.whole) };
+    }
   }
-  if (m.whole !== 0 && m.num === 0) {
-    return { kind: 'text', text: String(m.whole) };
-  }
+
   return { kind: 'frac', num: f.num, den: f.den };
 }
 
@@ -49,15 +80,25 @@ function randomDen(min: number, max: number): number {
   return randomInt(Math.max(2, min), max);
 }
 
-function randomProperFrac(maxDen: number, maxNum: number, allowNeg: boolean): Frac {
+/** Случайная дробь: правильная (|числ| < знам.) или неправильная (|числ| ≥ знам.) */
+function randomOrdinaryFrac(maxDen: number, maxNum: number, allowNeg: boolean): Frac {
   const den = randomDen(2, maxDen);
-  let num = randomInt(1, Math.min(maxNum, den - 1));
+  const absMax = Math.max(maxNum, den);
+
+  let absNum: number;
+  if (Math.random() < 0.5 && den > 1) {
+    absNum = randomInt(1, Math.min(maxNum, den - 1));
+  } else {
+    absNum = randomInt(den, Math.min(absMax, den * 3));
+  }
+
+  let num = absNum;
   if (allowNeg && Math.random() < 0.3) num = -num;
   return { num, den };
 }
 
 function randomUnreducedFrac(maxDen: number, maxNum: number): Frac {
-  const base = randomProperFrac(maxDen, maxNum, false);
+  const base = randomOrdinaryFrac(maxDen, maxNum, false);
   const factor = randomInt(2, 4);
   return { num: base.num * factor, den: base.den * factor };
 }
@@ -119,13 +160,13 @@ function makeProblem(
 }
 
 function genCompare(settings: FractionSettings, id: string): Problem | null {
-  const a = randomProperFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
-  const b = randomProperFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
+  const a = randomOrdinaryFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
+  const b = randomOrdinaryFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
   const cmp = compareFrac(a, b);
 
   return makeProblem(
     id,
-    [fracPart(a), textPart('  ?  '), fracPart(b)],
+    [fracPart(a, { asImproper: true }), textPart('  ?  '), fracPart(b, { asImproper: true })],
     formatComparisonAnswer(cmp),
     { kind: 'compare', value: cmp },
     '<, > или =',
@@ -138,7 +179,7 @@ function genReduce(settings: FractionSettings, id: string): Problem | null {
 
   return makeProblem(
     id,
-    [fracPart(unreduced), textPart(' = ?')],
+    [fracPart(unreduced, { asImproper: true }), textPart(' = ?')],
     formatFracAnswer(answer),
     { kind: 'frac', value: answer },
     'числитель/знаменатель',
@@ -146,9 +187,13 @@ function genReduce(settings: FractionSettings, id: string): Problem | null {
 }
 
 function genCommonDenom(settings: FractionSettings, id: string): Problem | null {
-  let a = randomProperFrac(settings.maxDenominator, settings.maxNumerator, false);
-  let b = randomProperFrac(settings.maxDenominator, settings.maxNumerator, false);
-  if (a.den === b.den) b = { ...b, den: b.den + 1 > settings.maxDenominator ? 2 : b.den + 1 };
+  let a = randomOrdinaryFrac(settings.maxDenominator, settings.maxNumerator, false);
+  let b = randomOrdinaryFrac(settings.maxDenominator, settings.maxNumerator, false);
+  if (a.den === b.den && Math.abs(a.num) === Math.abs(b.num)) {
+    b = { ...b, num: b.num + 1 };
+  } else if (a.den === b.den) {
+    b = { ...b, den: b.den + 1 > settings.maxDenominator ? 2 : b.den + 1 };
+  }
 
   const { a: ca, b: cb } = toCommonDenominator(a, b);
 
@@ -156,9 +201,9 @@ function genCommonDenom(settings: FractionSettings, id: string): Problem | null 
     id,
     [
       textPart('Запишите с общим знаменателем: '),
-      fracPart(a),
+      fracPart(a, { asImproper: true }),
       textPart(' и '),
-      fracPart(b),
+      fracPart(b, { asImproper: true }),
     ],
     formatCommonDenomAnswer(ca, cb),
     { kind: 'common-denom', a: ca, b: cb },
@@ -172,7 +217,7 @@ function genMixedToImproper(settings: FractionSettings, id: string): Problem | n
 
   return makeProblem(
     id,
-    [fracPart({ num: m.num, den: m.den }, m.whole), textPart(' = ?')],
+    [fracPart({ num: m.num, den: m.den }, { whole: m.whole }), textPart(' = ?')],
     formatFracAnswer(answer),
     { kind: 'frac', value: answer },
   );
@@ -183,17 +228,14 @@ function genImproperToMixed(settings: FractionSettings, id: string): Problem | n
 
   return makeProblem(
     id,
-    [fracPart(f), textPart(' = ?')],
+    [fracPart(f, { asImproper: true }), textPart(' = ?')],
     formatFracAnswer(f),
     { kind: 'frac', value: f },
   );
 }
 
 function genOrdinaryToDecimal(settings: FractionSettings, id: string): Problem | null {
-  const den = randomInt(2, Math.min(10, settings.maxDenominator));
-  const num = randomInt(1, den - 1);
-  const factor = gcd(num, den) === 1 ? 1 : 2;
-  const f = reduce({ num: num * factor, den: den * factor });
+  const f = reduce(randomOrdinaryFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative));
   const dec = fracToNumber(f);
   const rounded = roundDecimal(dec, settings.decimalPlaces);
 
@@ -201,7 +243,7 @@ function genOrdinaryToDecimal(settings: FractionSettings, id: string): Problem |
 
   return makeProblem(
     id,
-    [fracPart(f), textPart(' = ?')],
+    [fracPart(f, { asImproper: true }), textPart(' = ?')],
     fracToDecimal(f, settings.decimalPlaces),
     { kind: 'decimal', value: rounded, places: settings.decimalPlaces },
   );
@@ -220,88 +262,71 @@ function genDecimalToOrdinary(settings: FractionSettings, id: string): Problem |
   );
 }
 
-function genOrdinaryOp(
+function genOrdinaryChain(
   settings: FractionSettings,
   id: string,
-  op: FracOp,
+  fixedOp?: FracOp,
 ): Problem | null {
-  const a = randomProperFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
-  const b = randomProperFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
-  const result = applyFracOp(a, op, b);
-  if (!result) return null;
+  const count = settings.operationsCount;
+  const operands: Frac[] = [randomOrdinaryFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative)];
+  const ops: FracOp[] = [];
+
+  for (let i = 0; i < count; i++) {
+    ops.push(fixedOp ?? randomOrdinaryOp());
+    operands.push(randomOrdinaryFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative));
+  }
+
+  let result = operands[0];
+  for (let i = 0; i < count; i++) {
+    const next = applyFracOp(result, ops[i], operands[i + 1]);
+    if (!next) return null;
+    result = next;
+  }
+
+  const parts: ExprPart[] = [fracPart(operands[0], { asImproper: true })];
+  for (let i = 0; i < count; i++) {
+    parts.push(textPart(opSymbol(ops[i])));
+    parts.push(fracPart(operands[i + 1], { asImproper: true }));
+  }
+  parts.push(textPart(' = ?'));
 
   return makeProblem(
     id,
-    [fracPart(a), textPart(opSymbol(op)), fracPart(b), textPart(' = ?')],
+    parts,
     formatFracAnswer(result),
     { kind: 'frac', value: result },
     'числитель/знаменатель',
   );
 }
 
-function genMixedOp(settings: FractionSettings, id: string): Problem | null {
-  const op = randomOrdinaryOp();
-  const ma = randomMixed(settings.maxWhole, settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
-  const mb = randomMixed(settings.maxWhole, settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
-  const a = toImproper(ma);
-  const b = toImproper(mb);
-  const result = applyFracOp(a, op, b);
-  if (!result) return null;
+function genMixedChain(settings: FractionSettings, id: string): Problem | null {
+  const count = settings.operationsCount;
+  const mixedOperands: Mixed[] = [];
+  const ops: FracOp[] = [];
 
-  return makeProblem(
-    id,
-    [
-      fracPart({ num: ma.num, den: ma.den }, ma.whole),
-      textPart(opSymbol(op)),
-      fracPart({ num: mb.num, den: mb.den }, mb.whole),
-      textPart(' = ?'),
-    ],
-    formatFracAnswer(result),
-    { kind: 'frac', value: result },
-  );
-}
+  for (let i = 0; i <= count; i++) {
+    mixedOperands.push(
+      randomMixed(settings.maxWhole, settings.maxDenominator, settings.maxNumerator, settings.allowNegative),
+    );
+    if (i < count) ops.push(randomOrdinaryOp());
+  }
 
-function genDecimalOp(
-  settings: FractionSettings,
-  id: string,
-  op: FracOp,
-): Problem | null {
-  const a = randomDecimal(settings.maxWhole, settings.decimalPlaces, settings.allowNegative);
-  const b = randomDecimal(Math.max(1, settings.maxWhole), settings.decimalPlaces, false);
-  if (op === '/' && b === 0) return null;
+  let result = toImproper(mixedOperands[0]);
+  for (let i = 0; i < count; i++) {
+    const next = applyFracOp(result, ops[i], toImproper(mixedOperands[i + 1]));
+    if (!next) return null;
+    result = next;
+  }
 
-  const result = applyDecimalOp(a, op, b);
-  if (result === null || !Number.isFinite(result)) return null;
-
-  const rounded = roundDecimal(result, settings.decimalPlaces);
-
-  return makeProblem(
-    id,
-    [
-      textPart(`${fracToDecimal({ num: Math.round(a * 10 ** settings.decimalPlaces), den: 10 ** settings.decimalPlaces }, settings.decimalPlaces)}${opSymbol(op)}${fracToDecimal({ num: Math.round(b * 10 ** settings.decimalPlaces), den: 10 ** settings.decimalPlaces }, settings.decimalPlaces)} = ?`),
-    ],
-    fracToDecimal({ num: Math.round(rounded * 10 ** settings.decimalPlaces), den: 10 ** settings.decimalPlaces }, settings.decimalPlaces),
-    { kind: 'decimal', value: rounded, places: settings.decimalPlaces },
-  );
-}
-
-function genMixedTypes(settings: FractionSettings, id: string): Problem | null {
-  const op = randomOrdinaryOp();
-  const a = randomProperFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative);
-  const dec = randomDecimal(settings.maxWhole, settings.decimalPlaces, settings.allowNegative);
-  const bFrac = decimalToFrac(dec, settings.maxDenominator);
-  if (!bFrac) return null;
-
-  const useFracFirst = Math.random() < 0.5;
-  const left = useFracFirst ? a : bFrac;
-  const right = useFracFirst ? bFrac : a;
-
-  const result = applyFracOp(left, op, right);
-  if (!result) return null;
-
-  const parts: ExprPart[] = useFracFirst
-    ? [fracPart(a), textPart(opSymbol(op)), decimalPart(dec, settings.decimalPlaces), textPart(' = ?')]
-    : [decimalPart(dec, settings.decimalPlaces), textPart(opSymbol(op)), fracPart(a), textPart(' = ?')];
+  const parts: ExprPart[] = [
+    fracPart({ num: mixedOperands[0].num, den: mixedOperands[0].den }, { whole: mixedOperands[0].whole }),
+  ];
+  for (let i = 0; i < count; i++) {
+    const m = mixedOperands[i + 1];
+    parts.push(textPart(opSymbol(ops[i])));
+    parts.push(fracPart({ num: m.num, den: m.den }, { whole: m.whole }));
+  }
+  parts.push(textPart(' = ?'));
 
   return makeProblem(
     id,
@@ -311,13 +336,129 @@ function genMixedTypes(settings: FractionSettings, id: string): Problem | null {
   );
 }
 
-function generateOne(settings: FractionSettings, index: number): Problem | null {
-  const id = `frac-${index}-${Date.now()}-${randomInt(0, 99999)}`;
+function genDecimalChain(
+  settings: FractionSettings,
+  id: string,
+  fixedOp?: FracOp,
+): Problem | null {
+  const count = settings.operationsCount;
+  const operands: number[] = [];
+  const ops: FracOp[] = [];
+  const scale = 10 ** settings.decimalPlaces;
+
+  for (let i = 0; i <= count; i++) {
+    operands.push(
+      randomDecimal(
+        i === 0 ? settings.maxWhole : Math.max(1, settings.maxWhole),
+        settings.decimalPlaces,
+        i === 0 ? settings.allowNegative : false,
+      ),
+    );
+    if (i < count) ops.push(fixedOp ?? randomOrdinaryOp());
+  }
+
+  let result = operands[0];
+  for (let i = 0; i < count; i++) {
+    if (ops[i] === '/' && operands[i + 1] === 0) return null;
+    const next = applyDecimalOp(result, ops[i], operands[i + 1]);
+    if (next === null || !Number.isFinite(next)) return null;
+    result = next;
+  }
+
+  const rounded = roundDecimal(result, settings.decimalPlaces);
+  const parts: ExprPart[] = [
+    textPart(
+      `${fracToDecimal({ num: Math.round(operands[0] * scale), den: scale }, settings.decimalPlaces)}`,
+    ),
+  ];
+  for (let i = 0; i < count; i++) {
+    const b = operands[i + 1];
+    parts.push(
+      textPart(
+        `${opSymbol(ops[i])}${fracToDecimal({ num: Math.round(b * scale), den: scale }, settings.decimalPlaces)}`,
+      ),
+    );
+  }
+  parts.push(textPart(' = ?'));
+
+  return makeProblem(
+    id,
+    parts,
+    fracToDecimal({ num: Math.round(rounded * scale), den: scale }, settings.decimalPlaces),
+    { kind: 'decimal', value: rounded, places: settings.decimalPlaces },
+  );
+}
+
+type MixedTypeOperand =
+  | { kind: 'frac'; frac: Frac }
+  | { kind: 'decimal'; value: number };
+
+function genMixedTypesChain(settings: FractionSettings, id: string): Problem | null {
+  const count = settings.operationsCount;
+  const operands: MixedTypeOperand[] = [];
+  const ops: FracOp[] = [];
+
+  for (let i = 0; i <= count; i++) {
+    if (Math.random() < 0.5) {
+      operands.push({
+        kind: 'frac',
+        frac: randomOrdinaryFrac(settings.maxDenominator, settings.maxNumerator, settings.allowNegative),
+      });
+    } else {
+      const dec = randomDecimal(settings.maxWhole, settings.decimalPlaces, settings.allowNegative);
+      const frac = decimalToFrac(dec, settings.maxDenominator);
+      if (!frac) return null;
+      operands.push({ kind: 'decimal', value: dec });
+    }
+    if (i < count) ops.push(randomOrdinaryOp());
+  }
+
+  const toFrac = (op: MixedTypeOperand): Frac | null => {
+    if (op.kind === 'frac') return op.frac;
+    return decimalToFrac(op.value, settings.maxDenominator);
+  };
+
+  let result = toFrac(operands[0]);
+  if (!result) return null;
+
+  for (let i = 0; i < count; i++) {
+    const right = toFrac(operands[i + 1]);
+    if (!right) return null;
+    const next = applyFracOp(result, ops[i], right);
+    if (!next) return null;
+    result = next;
+  }
+
+  const operandPart = (op: MixedTypeOperand): ExprPart => {
+    if (op.kind === 'frac') return fracPart(op.frac, { asImproper: true });
+    return decimalPart(op.value, settings.decimalPlaces);
+  };
+
+  const parts: ExprPart[] = [operandPart(operands[0])];
+  for (let i = 0; i < count; i++) {
+    parts.push(textPart(opSymbol(ops[i])));
+    parts.push(operandPart(operands[i + 1]));
+  }
+  parts.push(textPart(' = ?'));
+
+  return makeProblem(
+    id,
+    parts,
+    formatFracAnswer(result),
+    { kind: 'frac', value: result },
+  );
+}
+
+function generateOne(settings: FractionSettings): Problem | null {
+  const id = `frac-${++fractionProblemCounter}-${Date.now()}-${randomInt(0, 99999)}`;
   const { mode } = settings;
+  const opsSettings = fractionModeSupportsOperationsCount(mode)
+    ? settings
+    : { ...settings, operationsCount: 1 };
 
   const singleOp = modeToOp(mode);
-  if (singleOp && mode.startsWith('ordinary-')) return genOrdinaryOp(settings, id, singleOp);
-  if (singleOp && mode.startsWith('decimal-')) return genDecimalOp(settings, id, singleOp);
+  if (singleOp && mode.startsWith('ordinary-')) return genOrdinaryChain(opsSettings, id, singleOp);
+  if (singleOp && mode.startsWith('decimal-')) return genDecimalChain(opsSettings, id, singleOp);
 
   switch (mode) {
     case 'compare':
@@ -335,30 +476,22 @@ function generateOne(settings: FractionSettings, index: number): Problem | null 
     case 'decimal-to-ordinary':
       return genDecimalToOrdinary(settings, id);
     case 'ordinary-all':
-      return genOrdinaryOp(settings, id, randomOrdinaryOp());
+      return genOrdinaryChain(opsSettings, id);
     case 'mixed':
-      return genMixedOp(settings, id);
+      return genMixedChain(opsSettings, id);
     case 'decimal-all':
-      return genDecimalOp(settings, id, randomOrdinaryOp());
+      return genDecimalChain(opsSettings, id);
     case 'mixed-types':
-      return genMixedTypes(settings, id);
+      return genMixedTypesChain(opsSettings, id);
     default:
       return null;
   }
 }
 
 export function generateFractionProblems(settings: FractionSettings): Problem[] {
-  const problems: Problem[] = [];
-
-  for (let i = 0; i < settings.problemsCount; i++) {
-    for (let attempt = 0; attempt < 200; attempt++) {
-      const p = generateOne(settings, i);
-      if (p) {
-        problems.push(p);
-        break;
-      }
-    }
-  }
-
-  return problems;
+  return fillUniqueProblems(settings.problemsCount, () => {
+    const problem = generateOne(settings);
+    if (!problem || !isAnswerAllowed(problem, settings)) return null;
+    return problem;
+  });
 }
