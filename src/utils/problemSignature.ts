@@ -24,6 +24,18 @@ function normalizeParts(parts: ExprPart[]): unknown[] {
         u: part.unknown ?? null,
       };
     }
+    if (part.kind === 'root') {
+      return {
+        r: part.index,
+        v: part.radicand ?? null,
+        u: part.unknown ?? null,
+        n: part.inner ?? null,
+        p: part.power ?? null,
+      };
+    }
+    if (part.kind === 'group-root-power') {
+      return { gr: part.index, v: part.radicand, e: part.exponent };
+    }
     return { f: part.num, den: part.den, w: part.whole ?? null };
   });
 }

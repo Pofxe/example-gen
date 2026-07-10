@@ -12,7 +12,16 @@ export type ExprPart =
       innerExponent: number;
       outerExponent: number;
       unknown?: 'exponent';
-    };
+    }
+  | {
+      kind: 'root';
+      index: 2 | 3;
+      radicand?: number;
+      unknown?: 'radicand';
+      inner?: { index: 2 | 3; radicand: number };
+      power?: { base: number; exponent: number };
+    }
+  | { kind: 'group-root-power'; index: 2 | 3; radicand: number; exponent: number };
 
 export interface Problem {
   id: string;

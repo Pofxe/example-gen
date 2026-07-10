@@ -54,6 +54,59 @@ function PowerDisplay({
   );
 }
 
+function RootContent({
+  index,
+  radicand,
+  unknown,
+  inner,
+  power,
+}: {
+  index: 2 | 3;
+  radicand?: number;
+  unknown?: 'radicand';
+  inner?: { index: 2 | 3; radicand: number };
+  power?: { base: number; exponent: number };
+}) {
+  const symbol = index === 2 ? '√' : '∛';
+
+  let content;
+  if (power) {
+    content = <PowerDisplay base={power.base} exponent={power.exponent} />;
+  } else if (inner) {
+    content = <RootContent index={inner.index} radicand={inner.radicand} />;
+  } else if (unknown === 'radicand') {
+    content = '?';
+  } else {
+    content = radicand;
+  }
+
+  return (
+    <span className="root-display">
+      <span className="root-display__symbol">{symbol}</span>
+      <span className="root-display__radicand">{content}</span>
+    </span>
+  );
+}
+
+function GroupRootPowerDisplay({
+  index,
+  radicand,
+  exponent,
+}: {
+  index: 2 | 3;
+  radicand: number;
+  exponent: number;
+}) {
+  return (
+    <span className="group-root-power-display">
+      <span className="group-root-power-display__paren">(</span>
+      <RootContent index={index} radicand={radicand} />
+      <span className="group-root-power-display__paren">)</span>
+      <sup className="power-display__exp">{exponent}</sup>
+    </span>
+  );
+}
+
 function GroupPowerDisplay({
   base,
   innerExponent,
@@ -113,6 +166,28 @@ export function FractionExpression({ parts, className = '' }: FractionExpression
               innerExponent={part.innerExponent}
               outerExponent={part.outerExponent}
               unknown={part.unknown}
+            />
+          );
+        }
+        if (part.kind === 'root') {
+          return (
+            <RootContent
+              key={i}
+              index={part.index}
+              radicand={part.radicand}
+              unknown={part.unknown}
+              inner={part.inner}
+              power={part.power}
+            />
+          );
+        }
+        if (part.kind === 'group-root-power') {
+          return (
+            <GroupRootPowerDisplay
+              key={i}
+              index={part.index}
+              radicand={part.radicand}
+              exponent={part.exponent}
             />
           );
         }
