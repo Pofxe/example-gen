@@ -30,7 +30,7 @@ export const TOPICS: TopicInfo[] = [
     title: 'Степени',
     description: 'Возведение в степень и свойства степеней',
     icon: 'x²',
-    available: false,
+    available: true,
     path: '/topic/powers',
   },
   {

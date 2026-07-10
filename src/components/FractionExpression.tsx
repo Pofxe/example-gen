@@ -32,6 +32,51 @@ function FractionStack({
   );
 }
 
+function PowerDisplay({
+  base,
+  exponent,
+  unknown,
+}: {
+  base?: number;
+  exponent?: number;
+  unknown?: 'base' | 'exponent';
+}) {
+  const baseText =
+    unknown === 'base' ? '?' : base !== undefined ? String(base) : '?';
+  const expText =
+    unknown === 'exponent' ? '?' : exponent !== undefined ? String(exponent) : '?';
+
+  return (
+    <span className="power-display">
+      <span className="power-display__base">{baseText}</span>
+      <sup className="power-display__exp">{expText}</sup>
+    </span>
+  );
+}
+
+function GroupPowerDisplay({
+  base,
+  innerExponent,
+  outerExponent,
+  unknown,
+}: {
+  base: number;
+  innerExponent: number;
+  outerExponent: number;
+  unknown?: 'exponent';
+}) {
+  return (
+    <span className="group-power-display">
+      <span className="group-power-display__paren">(</span>
+      <PowerDisplay base={base} exponent={innerExponent} />
+      <span className="group-power-display__paren">)</span>
+      <sup className="power-display__exp">
+        {unknown === 'exponent' ? '?' : outerExponent}
+      </sup>
+    </span>
+  );
+}
+
 export function FractionExpression({ parts, className = '' }: FractionExpressionProps) {
   return (
     <span className={`fraction-expression ${className}`}>
@@ -48,6 +93,27 @@ export function FractionExpression({ parts, className = '' }: FractionExpression
             <span key={i} className="fraction-expression__decimal">
               {part.value}
             </span>
+          );
+        }
+        if (part.kind === 'power') {
+          return (
+            <PowerDisplay
+              key={i}
+              base={part.base}
+              exponent={part.exponent}
+              unknown={part.unknown}
+            />
+          );
+        }
+        if (part.kind === 'group-power') {
+          return (
+            <GroupPowerDisplay
+              key={i}
+              base={part.base}
+              innerExponent={part.innerExponent}
+              outerExponent={part.outerExponent}
+              unknown={part.unknown}
+            />
           );
         }
         return (

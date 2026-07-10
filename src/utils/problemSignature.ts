@@ -13,6 +13,17 @@ function normalizeParts(parts: ExprPart[]): unknown[] {
     if (part.kind === 'decimal') {
       return { d: part.value };
     }
+    if (part.kind === 'power') {
+      return { p: part.base ?? null, e: part.exponent ?? null, u: part.unknown ?? null };
+    }
+    if (part.kind === 'group-power') {
+      return {
+        g: part.base,
+        i: part.innerExponent,
+        o: part.outerExponent,
+        u: part.unknown ?? null,
+      };
+    }
     return { f: part.num, den: part.den, w: part.whole ?? null };
   });
 }
