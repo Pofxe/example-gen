@@ -3,6 +3,7 @@ export type ArithmeticOperation = '+' | '-' | '*' | '/';
 export interface ArithmeticSettings {
   operationsCount: number;
   allowNegatives: boolean;
+  allowNegativeAnswer: boolean;
   minValue: number;
   maxValue: number;
   allowedOperations: ArithmeticOperation[];
@@ -13,6 +14,7 @@ export interface ArithmeticSettings {
 export const DEFAULT_ARITHMETIC_SETTINGS: ArithmeticSettings = {
   operationsCount: 2,
   allowNegatives: false,
+  allowNegativeAnswer: false,
   minValue: 1,
   maxValue: 20,
   allowedOperations: ['+', '-', '*'],

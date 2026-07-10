@@ -22,7 +22,7 @@ export const TOPICS: TopicInfo[] = [
     title: 'Проценты',
     description: 'Нахождение процентов и процентных отношений',
     icon: '%',
-    available: false,
+    available: true,
     path: '/topic/percentages',
   },
   {

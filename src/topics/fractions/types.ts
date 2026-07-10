@@ -21,23 +21,46 @@ export type FractionMode =
 
 export interface FractionSettings {
   mode: FractionMode;
+  operationsCount: number;
   maxDenominator: number;
   maxNumerator: number;
   maxWhole: number;
   decimalPlaces: number;
   problemsCount: number;
   allowNegative: boolean;
+  allowNegativeAnswer: boolean;
 }
 
 export const DEFAULT_FRACTION_SETTINGS: FractionSettings = {
   mode: 'compare',
+  operationsCount: 1,
   maxDenominator: 12,
   maxNumerator: 12,
   maxWhole: 5,
   decimalPlaces: 2,
   problemsCount: 10,
   allowNegative: false,
+  allowNegativeAnswer: false,
 };
+
+const FRACTION_OPS_MODES: FractionMode[] = [
+  'ordinary-add',
+  'ordinary-sub',
+  'ordinary-mul',
+  'ordinary-div',
+  'ordinary-all',
+  'mixed',
+  'decimal-add',
+  'decimal-sub',
+  'decimal-mul',
+  'decimal-div',
+  'decimal-all',
+  'mixed-types',
+];
+
+export function fractionModeSupportsOperationsCount(mode: FractionMode): boolean {
+  return FRACTION_OPS_MODES.includes(mode);
+}
 
 export interface FractionModeInfo {
   id: FractionMode;

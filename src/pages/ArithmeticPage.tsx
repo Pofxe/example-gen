@@ -188,6 +188,15 @@ export function ArithmeticPage() {
         <label className="setting-checkbox">
           <input
             type="checkbox"
+            checked={settings.allowNegativeAnswer}
+            onChange={(e) => updateSetting('allowNegativeAnswer', e.target.checked)}
+          />
+          <span>Отрицательный ответ</span>
+        </label>
+
+        <label className="setting-checkbox">
+          <input
+            type="checkbox"
             checked={settings.useParentheses}
             disabled={settings.operationsCount < 2}
             onChange={(e) => updateSetting('useParentheses', e.target.checked)}

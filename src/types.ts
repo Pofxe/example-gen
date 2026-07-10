@@ -21,6 +21,7 @@ export type ProblemCheck =
   | { kind: 'frac'; value: { num: number; den: number } }
   | { kind: 'compare'; value: -1 | 0 | 1 }
   | { kind: 'decimal'; value: number; places: number }
+  | { kind: 'percent'; value: number; places: number }
   | { kind: 'common-denom'; a: { num: number; den: number }; b: { num: number; den: number } };
 
 export interface TopicInfo {
