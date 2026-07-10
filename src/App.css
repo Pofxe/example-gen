@@ -363,6 +363,65 @@ body {
   margin: 1px 0;
 }
 
+.power-display {
+  display: inline-flex;
+  align-items: flex-start;
+  vertical-align: baseline;
+}
+
+.power-display__base {
+  font-size: 1em;
+}
+
+.power-display__exp {
+  font-size: 0.65em;
+  line-height: 1;
+  margin-left: 0.05em;
+  font-weight: 600;
+}
+
+.group-power-display {
+  display: inline-flex;
+  align-items: flex-start;
+  vertical-align: baseline;
+}
+
+.group-power-display__paren {
+  font-size: 1.05em;
+  line-height: 1;
+  margin: 0 0.05em;
+}
+
+.root-display {
+  display: inline-flex;
+  align-items: flex-start;
+  vertical-align: baseline;
+}
+
+.root-display__symbol {
+  font-size: 1.1em;
+  line-height: 1;
+  margin-right: 0.05em;
+}
+
+.root-display__radicand {
+  border-top: 2px solid currentColor;
+  padding: 0.1em 0.25em 0 0.15em;
+  line-height: 1.2;
+}
+
+.group-root-power-display {
+  display: inline-flex;
+  align-items: flex-start;
+  vertical-align: baseline;
+}
+
+.group-root-power-display__paren {
+  font-size: 1.05em;
+  line-height: 1;
+  margin: 0 0.05em;
+}
+
 .setting-select {
   width: 100%;
   padding: 8px 12px;

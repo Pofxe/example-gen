@@ -30,7 +30,7 @@ export const TOPICS: TopicInfo[] = [
     title: 'Степени',
     description: 'Возведение в степень и свойства степеней',
     icon: 'x²',
-    available: false,
+    available: true,
     path: '/topic/powers',
   },
   {
@@ -38,7 +38,7 @@ export const TOPICS: TopicInfo[] = [
     title: 'Корни',
     description: 'Квадратные и кубические корни',
     icon: '√',
-    available: false,
+    available: true,
     path: '/topic/roots',
   },
   {

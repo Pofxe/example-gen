@@ -4,7 +4,24 @@ export type AnswerStatus = 'idle' | 'correct' | 'incorrect';
 export type ExprPart =
   | { kind: 'text'; text: string }
   | { kind: 'frac'; num: number; den: number; whole?: number }
-  | { kind: 'decimal'; value: string };
+  | { kind: 'decimal'; value: string }
+  | { kind: 'power'; base?: number; exponent?: number; unknown?: 'base' | 'exponent' }
+  | {
+      kind: 'group-power';
+      base: number;
+      innerExponent: number;
+      outerExponent: number;
+      unknown?: 'exponent';
+    }
+  | {
+      kind: 'root';
+      index: 2 | 3;
+      radicand?: number;
+      unknown?: 'radicand';
+      inner?: { index: 2 | 3; radicand: number };
+      power?: { base: number; exponent: number };
+    }
+  | { kind: 'group-root-power'; index: 2 | 3; radicand: number; exponent: number };
 
 export interface Problem {
   id: string;
