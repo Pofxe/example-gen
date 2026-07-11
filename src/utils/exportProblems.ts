@@ -203,6 +203,10 @@ export function buildStudentWorksheetMarkdown(
     const expression = partsToPlainText(problem.parts);
     lines.push(`## Задание ${index + 1}`);
     lines.push('');
+    if (problem.sourceTopicTitle) {
+      lines.push(`*Тема: ${problem.sourceTopicTitle}*`);
+      lines.push('');
+    }
     lines.push(expression);
     lines.push('');
     lines.push('**Ответ:** _________________________________');

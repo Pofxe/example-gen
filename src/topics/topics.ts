@@ -65,4 +65,12 @@ export const TOPICS: TopicInfo[] = [
     available: true,
     path: '/topic/quadratic-equations',
   },
+  {
+    id: 'mixed',
+    title: 'Обобщённые примеры',
+    description: 'Смешанный набор из нескольких тем',
+    icon: '∑',
+    available: true,
+    path: '/topic/mixed',
+  },
 ];

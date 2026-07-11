@@ -31,6 +31,9 @@ export interface Problem {
   inputPlaceholder?: string;
   /** Данные для проверки (дроби, сравнение и т.д.) */
   check?: ProblemCheck;
+  /** Источник примера в обобщённом наборе */
+  sourceTopicId?: string;
+  sourceTopicTitle?: string;
 }
 
 export type ProblemCheck =

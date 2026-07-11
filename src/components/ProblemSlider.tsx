@@ -125,6 +125,9 @@ export function ProblemSlider({ session, onAnswer, onNavigate, exportInfo }: Pro
       </div>
 
       <div className="problem-slider__body">
+        {problem.sourceTopicTitle && (
+          <p className="problem-slider__topic-badge">{problem.sourceTopicTitle}</p>
+        )}
         <div className="problem-slider__expression">
           <FractionExpression parts={problem.parts ?? [{ kind: 'text', text: '?' }]} />
         </div>
