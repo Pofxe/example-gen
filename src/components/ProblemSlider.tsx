@@ -1,11 +1,17 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { FractionExpression } from './FractionExpression';
+import { JsonExportPasswordDialog } from './JsonExportPasswordDialog';
 import type { AnswerStatus, ProblemSession } from '../types';
+import { exportProblemsAsJson, exportProblemsForStudent, type ExportTopicInfo } from '../utils/exportProblems';
 
 interface ProblemSliderProps {
   session: ProblemSession;
   onAnswer: (problemId: string, value: string) => void;
   onNavigate: (index: number) => void;
+  exportInfo?: {
+    topic: ExportTopicInfo;
+    settings: Record<string, unknown>;
+  };
 }
 
 function canNavigateTo(
@@ -20,10 +26,11 @@ function canNavigateTo(
   return true;
 }
 
-export function ProblemSlider({ session, onAnswer, onNavigate }: ProblemSliderProps) {
+export function ProblemSlider({ session, onAnswer, onNavigate, exportInfo }: ProblemSliderProps) {
   const { problems, currentIndex, correctCount, userAnswers, answerStatuses } = session;
   const problem = problems[currentIndex];
   const [inputValue, setInputValue] = useState('');
+  const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!problem) {
@@ -64,15 +71,57 @@ export function ProblemSlider({ session, onAnswer, onNavigate }: ProblemSliderPr
     onNavigate(index);
   };
 
+  const handleExportJson = () => {
+    if (!exportInfo || problems.length === 0) return;
+    setJsonDialogOpen(true);
+  };
+
+  const confirmExportJson = () => {
+    if (!exportInfo || problems.length === 0) return;
+    exportProblemsAsJson(exportInfo.topic, exportInfo.settings, session);
+  };
+
+  const handleExportStudent = () => {
+    if (!exportInfo || problems.length === 0) return;
+    exportProblemsForStudent(exportInfo.topic, session);
+  };
+
   return (
     <section className="problem-slider">
+      <JsonExportPasswordDialog
+        open={jsonDialogOpen}
+        onClose={() => setJsonDialogOpen(false)}
+        onSuccess={confirmExportJson}
+      />
       <div className="problem-slider__header">
         <span className="problem-slider__counter">
           Задание {currentIndex + 1} из {problems.length}
         </span>
-        <span className="problem-slider__score">
-          Правильно: <strong>{correctCount}</strong>
-        </span>
+        <div className="problem-slider__header-actions">
+          {exportInfo && (
+            <div className="problem-slider__export-group">
+              <button
+                type="button"
+                className="btn btn--ghost btn--export"
+                onClick={handleExportStudent}
+                title="Лист заданий для ученика (Markdown, UTF-8, без ответов)"
+              >
+                Для ученика
+              </button>
+              <button
+                type="button"
+                className="btn btn--ghost btn--export"
+                onClick={handleExportJson}
+                title="Полный экспорт с ответами и настройками (JSON, UTF-8)"
+              >
+                JSON
+              </button>
+            </div>
+          )}
+          <span className="problem-slider__score">
+            Правильно: <strong>{correctCount}</strong>
+          </span>
+        </div>
       </div>
 
       <div className="problem-slider__body">

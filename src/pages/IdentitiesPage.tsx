@@ -2,12 +2,11 @@ import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
 import {
-  DEFAULT_FRACTION_SETTINGS,
-  FRACTION_MODES,
-  fractionModeSupportsOperationsCount,
-  type FractionMode,
-  type FractionSettings,
-} from '../topics/fractions/types';
+  DEFAULT_IDENTITY_SETTINGS,
+  IDENTITY_MODES,
+  type IdentityMode,
+  type IdentitySettings,
+} from '../topics/identities/types';
 import type { AnswerStatus, ProblemSession } from '../types';
 
 const EMPTY_SESSION: ProblemSession = {
@@ -18,14 +17,14 @@ const EMPTY_SESSION: ProblemSession = {
   answerStatuses: {},
 };
 
-export function FractionsPage() {
-  const [settings, setSettings] = useState<FractionSettings>(DEFAULT_FRACTION_SETTINGS);
+export function IdentitiesPage() {
+  const [settings, setSettings] = useState<IdentitySettings>(DEFAULT_IDENTITY_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
-  const updateSetting = <K extends keyof FractionSettings>(
+  const updateSetting = <K extends keyof IdentitySettings>(
     key: K,
-    value: FractionSettings[K],
+    value: IdentitySettings[K],
   ) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
@@ -33,8 +32,13 @@ export function FractionsPage() {
   const handleGenerate = async () => {
     setGenerateError(null);
 
-    const { generateFractionProblems } = await import('../topics/fractions/generator');
-    const problems = generateFractionProblems(settings);
+    if (settings.minValue > settings.maxValue) {
+      setGenerateError('Минимальное значение не может быть больше максимального');
+      return;
+    }
+
+    const { generateIdentityProblems } = await import('../topics/identities/generator');
+    const problems = generateIdentityProblems(settings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -53,13 +57,13 @@ export function FractionsPage() {
   };
 
   const handleAnswer = useCallback(async (problemId: string, value: string) => {
-    const { checkFractionProblemAnswer } = await import('../topics/fractions/checker');
+    const { checkIdentityProblemAnswer } = await import('../topics/identities/checker');
 
     setSession((prev) => {
       const problem = prev.problems.find((p) => p.id === problemId);
       if (!problem || prev.answerStatuses[problemId]) return prev;
 
-      const isCorrect = checkFractionProblemAnswer(problem, value);
+      const isCorrect = checkIdentityProblemAnswer(problem, value);
       const status: AnswerStatus = isCorrect ? 'correct' : 'incorrect';
 
       return {
@@ -82,9 +86,9 @@ export function FractionsPage() {
       </Link>
 
       <header className="page-header">
-        <h1>Дроби</h1>
+        <h1>Формулы сокращённого умножения</h1>
         <p className="page-header__subtitle">
-          Обыкновенные и десятичные дроби, смешанные числа
+          Прямое и обратное применение формул
         </p>
       </header>
 
@@ -96,9 +100,9 @@ export function FractionsPage() {
           <select
             className="setting-select"
             value={settings.mode}
-            onChange={(e) => updateSetting('mode', e.target.value as FractionMode)}
+            onChange={(e) => updateSetting('mode', e.target.value as IdentityMode)}
           >
-            {FRACTION_MODES.map((m) => (
+            {IDENTITY_MODES.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.group} — {m.label}
               </option>
@@ -107,24 +111,6 @@ export function FractionsPage() {
         </label>
 
         <div className="settings-grid">
-          <label className="setting-field">
-            <span className="setting-field__label">
-              Количество действий: <strong>{settings.operationsCount}</strong>
-              {!fractionModeSupportsOperationsCount(settings.mode) && (
-                <span className="setting-hint"> (недоступно для этого типа)</span>
-              )}
-            </span>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              step={1}
-              value={settings.operationsCount}
-              disabled={!fractionModeSupportsOperationsCount(settings.mode)}
-              onChange={(e) => updateSetting('operationsCount', Number(e.target.value))}
-            />
-          </label>
-
           <label className="setting-field">
             <span className="setting-field__label">Количество примеров</span>
             <input
@@ -139,66 +125,31 @@ export function FractionsPage() {
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Макс. знаменатель</span>
+            <span className="setting-field__label">Мин. значение</span>
             <input
               type="number"
-              min={2}
-              max={50}
-              value={settings.maxDenominator}
+              min={1}
+              max={30}
+              value={settings.minValue}
               onChange={(e) =>
-                updateSetting('maxDenominator', Math.max(2, Math.min(50, Number(e.target.value))))
+                updateSetting('minValue', Math.max(1, Math.min(30, Number(e.target.value))))
               }
             />
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Макс. числитель</span>
+            <span className="setting-field__label">Макс. значение</span>
             <input
               type="number"
               min={1}
-              max={50}
-              value={settings.maxNumerator}
+              max={30}
+              value={settings.maxValue}
               onChange={(e) =>
-                updateSetting('maxNumerator', Math.max(1, Math.min(50, Number(e.target.value))))
-              }
-            />
-          </label>
-
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. целая часть</span>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={settings.maxWhole}
-              onChange={(e) =>
-                updateSetting('maxWhole', Math.max(1, Math.min(20, Number(e.target.value))))
-              }
-            />
-          </label>
-
-          <label className="setting-field">
-            <span className="setting-field__label">Знаков после запятой</span>
-            <input
-              type="number"
-              min={1}
-              max={4}
-              value={settings.decimalPlaces}
-              onChange={(e) =>
-                updateSetting('decimalPlaces', Math.max(1, Math.min(4, Number(e.target.value))))
+                updateSetting('maxValue', Math.max(1, Math.min(30, Number(e.target.value))))
               }
             />
           </label>
         </div>
-
-        <label className="setting-checkbox">
-          <input
-            type="checkbox"
-            checked={settings.allowNegative}
-            onChange={(e) => updateSetting('allowNegative', e.target.checked)}
-          />
-          <span>Разрешить отрицательные числа</span>
-        </label>
 
         <label className="setting-checkbox">
           <input
@@ -210,8 +161,7 @@ export function FractionsPage() {
         </label>
 
         <p className="settings-panel__hint">
-          Формат ответа: <code>3/4</code> или <code>2 3/4</code> (целое, пробел, числитель/знаменатель).
-          Для сравнения: <code>&lt;</code>, <code>&gt;</code> или <code>=</code>.
+          Для указания степени используется знак <code>^</code>.
         </p>
 
         <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
@@ -226,7 +176,7 @@ export function FractionsPage() {
         onAnswer={handleAnswer}
         onNavigate={handleNavigate}
         exportInfo={{
-          topic: { id: 'fractions', title: 'Дроби' },
+          topic: { id: 'identities', title: 'Формулы сокращённого умножения' },
           settings: { ...settings },
         }}
       />

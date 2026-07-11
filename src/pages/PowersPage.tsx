@@ -228,6 +228,10 @@ export function PowersPage() {
         session={session}
         onAnswer={handleAnswer}
         onNavigate={handleNavigate}
+        exportInfo={{
+          topic: { id: 'powers', title: 'Степени' },
+          settings: { ...settings },
+        }}
       />
     </div>
   );

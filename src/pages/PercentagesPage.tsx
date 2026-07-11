@@ -250,6 +250,10 @@ export function PercentagesPage() {
         session={session}
         onAnswer={handleAnswer}
         onNavigate={handleNavigate}
+        exportInfo={{
+          topic: { id: 'percentages', title: 'Проценты' },
+          settings: { ...settings },
+        }}
       />
     </div>
   );

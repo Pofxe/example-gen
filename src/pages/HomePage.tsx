@@ -1,15 +1,13 @@
 import { TOPICS } from '../topics/topics';
 import { TopicCard } from '../components/TopicCard';
+import { LoadAssignmentCard } from '../components/LoadAssignmentCard';
 
 export function HomePage() {
   return (
     <div className="page home-page">
-      <header className="page-header">
-        <h1>Генератор заданий</h1>
-        <p className="page-header__subtitle">
-          Примеры и уравнения по школьным темам
-        </p>
-      </header>
+      <section className="home-page__load">
+        <LoadAssignmentCard />
+      </section>
 
       <div className="topics-grid">
         {TOPICS.map((topic) => (
