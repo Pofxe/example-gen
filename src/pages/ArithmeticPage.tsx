@@ -236,6 +236,10 @@ export function ArithmeticPage() {
         session={session}
         onAnswer={handleAnswer}
         onNavigate={handleNavigate}
+        exportInfo={{
+          topic: { id: 'arithmetic', title: 'Арифметика' },
+          settings: { ...settings },
+        }}
       />
     </div>
   );

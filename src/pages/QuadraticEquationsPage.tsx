@@ -2,12 +2,11 @@ import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
 import {
-  DEFAULT_FRACTION_SETTINGS,
-  FRACTION_MODES,
-  fractionModeSupportsOperationsCount,
-  type FractionMode,
-  type FractionSettings,
-} from '../topics/fractions/types';
+  DEFAULT_QUADRATIC_EQUATION_SETTINGS,
+  QUADRATIC_EQUATION_MODES,
+  type QuadraticEquationMode,
+  type QuadraticEquationSettings,
+} from '../topics/quadratic-equations/types';
 import type { AnswerStatus, ProblemSession } from '../types';
 
 const EMPTY_SESSION: ProblemSession = {
@@ -18,14 +17,16 @@ const EMPTY_SESSION: ProblemSession = {
   answerStatuses: {},
 };
 
-export function FractionsPage() {
-  const [settings, setSettings] = useState<FractionSettings>(DEFAULT_FRACTION_SETTINGS);
+export function QuadraticEquationsPage() {
+  const [settings, setSettings] = useState<QuadraticEquationSettings>(
+    DEFAULT_QUADRATIC_EQUATION_SETTINGS,
+  );
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
-  const updateSetting = <K extends keyof FractionSettings>(
+  const updateSetting = <K extends keyof QuadraticEquationSettings>(
     key: K,
-    value: FractionSettings[K],
+    value: QuadraticEquationSettings[K],
   ) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
@@ -33,8 +34,19 @@ export function FractionsPage() {
   const handleGenerate = async () => {
     setGenerateError(null);
 
-    const { generateFractionProblems } = await import('../topics/fractions/generator');
-    const problems = generateFractionProblems(settings);
+    if (settings.minCoeff > settings.maxCoeff) {
+      setGenerateError('Мин. коэффициент не может быть больше максимального');
+      return;
+    }
+    if (settings.minRoot > settings.maxRoot) {
+      setGenerateError('Мин. корень не может быть больше максимального');
+      return;
+    }
+
+    const { generateQuadraticEquationProblems } = await import(
+      '../topics/quadratic-equations/generator'
+    );
+    const problems = generateQuadraticEquationProblems(settings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -53,13 +65,15 @@ export function FractionsPage() {
   };
 
   const handleAnswer = useCallback(async (problemId: string, value: string) => {
-    const { checkFractionProblemAnswer } = await import('../topics/fractions/checker');
+    const { checkQuadraticEquationAnswer } = await import(
+      '../topics/quadratic-equations/checker'
+    );
 
     setSession((prev) => {
       const problem = prev.problems.find((p) => p.id === problemId);
       if (!problem || prev.answerStatuses[problemId]) return prev;
 
-      const isCorrect = checkFractionProblemAnswer(problem, value);
+      const isCorrect = checkQuadraticEquationAnswer(problem, value);
       const status: AnswerStatus = isCorrect ? 'correct' : 'incorrect';
 
       return {
@@ -82,9 +96,9 @@ export function FractionsPage() {
       </Link>
 
       <header className="page-header">
-        <h1>Дроби</h1>
+        <h1>Квадратные уравнения</h1>
         <p className="page-header__subtitle">
-          Обыкновенные и десятичные дроби, смешанные числа
+          Уравнения вида ax² + bx + c = 0 и неполные квадратные
         </p>
       </header>
 
@@ -92,13 +106,13 @@ export function FractionsPage() {
         <h2 className="settings-panel__title">Настройки</h2>
 
         <label className="setting-field">
-          <span className="setting-field__label">Тип задания</span>
+          <span className="setting-field__label">Тип уравнения</span>
           <select
             className="setting-select"
             value={settings.mode}
-            onChange={(e) => updateSetting('mode', e.target.value as FractionMode)}
+            onChange={(e) => updateSetting('mode', e.target.value as QuadraticEquationMode)}
           >
-            {FRACTION_MODES.map((m) => (
+            {QUADRATIC_EQUATION_MODES.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.group} — {m.label}
               </option>
@@ -107,24 +121,6 @@ export function FractionsPage() {
         </label>
 
         <div className="settings-grid">
-          <label className="setting-field">
-            <span className="setting-field__label">
-              Количество действий: <strong>{settings.operationsCount}</strong>
-              {!fractionModeSupportsOperationsCount(settings.mode) && (
-                <span className="setting-hint"> (недоступно для этого типа)</span>
-              )}
-            </span>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              step={1}
-              value={settings.operationsCount}
-              disabled={!fractionModeSupportsOperationsCount(settings.mode)}
-              onChange={(e) => updateSetting('operationsCount', Number(e.target.value))}
-            />
-          </label>
-
           <label className="setting-field">
             <span className="setting-field__label">Количество примеров</span>
             <input
@@ -139,53 +135,53 @@ export function FractionsPage() {
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Макс. знаменатель</span>
+            <span className="setting-field__label">Мин. коэффициент при x²</span>
             <input
               type="number"
-              min={2}
-              max={50}
-              value={settings.maxDenominator}
+              min={1}
+              max={10}
+              value={settings.minCoeff}
               onChange={(e) =>
-                updateSetting('maxDenominator', Math.max(2, Math.min(50, Number(e.target.value))))
+                updateSetting('minCoeff', Math.max(1, Math.min(10, Number(e.target.value))))
               }
             />
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Макс. числитель</span>
+            <span className="setting-field__label">Макс. коэффициент при x²</span>
             <input
               type="number"
               min={1}
-              max={50}
-              value={settings.maxNumerator}
+              max={10}
+              value={settings.maxCoeff}
               onChange={(e) =>
-                updateSetting('maxNumerator', Math.max(1, Math.min(50, Number(e.target.value))))
+                updateSetting('maxCoeff', Math.max(1, Math.min(10, Number(e.target.value))))
               }
             />
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Макс. целая часть</span>
+            <span className="setting-field__label">Мин. корень</span>
             <input
               type="number"
-              min={1}
-              max={20}
-              value={settings.maxWhole}
+              min={-30}
+              max={30}
+              value={settings.minRoot}
               onChange={(e) =>
-                updateSetting('maxWhole', Math.max(1, Math.min(20, Number(e.target.value))))
+                updateSetting('minRoot', Math.max(-30, Math.min(30, Number(e.target.value))))
               }
             />
           </label>
 
           <label className="setting-field">
-            <span className="setting-field__label">Знаков после запятой</span>
+            <span className="setting-field__label">Макс. корень</span>
             <input
               type="number"
-              min={1}
-              max={4}
-              value={settings.decimalPlaces}
+              min={-30}
+              max={30}
+              value={settings.maxRoot}
               onChange={(e) =>
-                updateSetting('decimalPlaces', Math.max(1, Math.min(4, Number(e.target.value))))
+                updateSetting('maxRoot', Math.max(-30, Math.min(30, Number(e.target.value))))
               }
             />
           </label>
@@ -194,24 +190,24 @@ export function FractionsPage() {
         <label className="setting-checkbox">
           <input
             type="checkbox"
-            checked={settings.allowNegative}
-            onChange={(e) => updateSetting('allowNegative', e.target.checked)}
+            checked={settings.allowNegativeCoeffs}
+            onChange={(e) => updateSetting('allowNegativeCoeffs', e.target.checked)}
           />
-          <span>Разрешить отрицательные числа</span>
+          <span>Разрешить отрицательный коэффициент при x²</span>
         </label>
 
         <label className="setting-checkbox">
           <input
             type="checkbox"
-            checked={settings.allowNegativeAnswer}
-            onChange={(e) => updateSetting('allowNegativeAnswer', e.target.checked)}
+            checked={settings.allowNegativeRoots}
+            onChange={(e) => updateSetting('allowNegativeRoots', e.target.checked)}
           />
-          <span>Отрицательный ответ</span>
+          <span>Разрешить отрицательные корни</span>
         </label>
 
         <p className="settings-panel__hint">
-          Формат ответа: <code>3/4</code> или <code>2 3/4</code> (целое, пробел, числитель/знаменатель).
-          Для сравнения: <code>&lt;</code>, <code>&gt;</code> или <code>=</code>.
+          Все уравнения имеют целые корни. Введите корни через запятую: <code>2, 5</code>.
+          Если корень один — достаточно одного числа.
         </p>
 
         <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
@@ -226,7 +222,7 @@ export function FractionsPage() {
         onAnswer={handleAnswer}
         onNavigate={handleNavigate}
         exportInfo={{
-          topic: { id: 'fractions', title: 'Дроби' },
+          topic: { id: 'quadratic-equations', title: 'Квадратные уравнения' },
           settings: { ...settings },
         }}
       />

@@ -39,7 +39,22 @@ export type ProblemCheck =
   | { kind: 'compare'; value: -1 | 0 | 1 }
   | { kind: 'decimal'; value: number; places: number }
   | { kind: 'percent'; value: number; places: number }
-  | { kind: 'common-denom'; a: { num: number; den: number }; b: { num: number; den: number } };
+  | { kind: 'common-denom'; a: { num: number; den: number }; b: { num: number; den: number } }
+  | {
+      kind: 'identity';
+      variant:
+        | 'square-sum'
+        | 'square-diff'
+        | 'diff-squares'
+        | 'cube-sum'
+        | 'cube-diff'
+        | 'sum-cubes'
+        | 'diff-cubes';
+      a: number;
+      b: number;
+      form: 'factored' | 'expanded';
+    }
+  | { kind: 'quadratic-roots'; roots: [number, number] };
 
 export interface TopicInfo {
   id: string;

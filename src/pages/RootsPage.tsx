@@ -189,6 +189,10 @@ export function RootsPage() {
         session={session}
         onAnswer={handleAnswer}
         onNavigate={handleNavigate}
+        exportInfo={{
+          topic: { id: 'roots', title: 'Корни' },
+          settings: { ...settings },
+        }}
       />
     </div>
   );

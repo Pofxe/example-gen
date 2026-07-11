@@ -42,11 +42,19 @@ export const TOPICS: TopicInfo[] = [
     path: '/topic/roots',
   },
   {
+    id: 'identities',
+    title: 'Формулы сокращённого умножения',
+    description: 'Квадраты, кубы, сумма и разность кубов',
+    icon: '(a+b)²',
+    available: true,
+    path: '/topic/identities',
+  },
+  {
     id: 'linear-equations',
     title: 'Линейные уравнения',
     description: 'Уравнения вида ax + b = c',
     icon: '𝑥',
-    available: false,
+    available: true,
     path: '/topic/linear-equations',
   },
   {
@@ -54,7 +62,7 @@ export const TOPICS: TopicInfo[] = [
     title: 'Квадратные уравнения',
     description: 'Уравнения вида ax² + bx + c = 0',
     icon: '𝑥²',
-    available: false,
+    available: true,
     path: '/topic/quadratic-equations',
   },
 ];
