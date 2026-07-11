@@ -9,6 +9,7 @@ import { IdentitiesPage } from './pages/IdentitiesPage';
 import { LoadAssignmentPage } from './pages/LoadAssignmentPage';
 import { LinearEquationsPage } from './pages/LinearEquationsPage';
 import { QuadraticEquationsPage } from './pages/QuadraticEquationsPage';
+import { MixedPage } from './pages/MixedPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppFooter } from './components/AppFooter';
 import './App.css';
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/load" element={<LoadAssignmentPage />} />
             <Route path="/topic/linear-equations" element={<LinearEquationsPage />} />
             <Route path="/topic/quadratic-equations" element={<QuadraticEquationsPage />} />
+            <Route path="/topic/mixed" element={<MixedPage />} />
             <Route
               path="*"
               element={
