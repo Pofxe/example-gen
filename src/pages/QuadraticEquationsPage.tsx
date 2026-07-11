@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomQuadraticEquationSettings } from '../utils/randomSettings';
 import {
   DEFAULT_QUADRATIC_EQUATION_SETTINGS,
   QUADRATIC_EQUATION_MODES,
@@ -23,6 +27,12 @@ export function QuadraticEquationsPage() {
   );
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomQuadraticEquationSettings);
 
   const updateSetting = <K extends keyof QuadraticEquationSettings>(
     key: K,
@@ -33,12 +43,13 @@ export function QuadraticEquationsPage() {
 
   const handleGenerate = async () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
-    if (settings.minCoeff > settings.maxCoeff) {
+    if (activeSettings.minCoeff > activeSettings.maxCoeff) {
       setGenerateError('Мин. коэффициент не может быть больше максимального');
       return;
     }
-    if (settings.minRoot > settings.maxRoot) {
+    if (activeSettings.minRoot > activeSettings.maxRoot) {
       setGenerateError('Мин. корень не может быть больше максимального');
       return;
     }
@@ -46,7 +57,7 @@ export function QuadraticEquationsPage() {
     const { generateQuadraticEquationProblems } = await import(
       '../topics/quadratic-equations/generator'
     );
-    const problems = generateQuadraticEquationProblems(settings);
+    const problems = generateQuadraticEquationProblems(activeSettings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -121,70 +132,45 @@ export function QuadraticEquationsPage() {
         </label>
 
         <div className="settings-grid">
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. коэффициент при x²</span>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={settings.minCoeff}
-              onChange={(e) =>
-                updateSetting('minCoeff', Math.max(1, Math.min(10, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. коэффициент при x²"
+            value={settings.minCoeff}
+            onChange={(value) => updateSetting('minCoeff', value)}
+            min={1}
+            max={10}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. коэффициент при x²</span>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={settings.maxCoeff}
-              onChange={(e) =>
-                updateSetting('maxCoeff', Math.max(1, Math.min(10, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. коэффициент при x²"
+            value={settings.maxCoeff}
+            onChange={(value) => updateSetting('maxCoeff', value)}
+            min={1}
+            max={10}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. корень</span>
-            <input
-              type="number"
-              min={-30}
-              max={30}
-              value={settings.minRoot}
-              onChange={(e) =>
-                updateSetting('minRoot', Math.max(-30, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. корень"
+            value={settings.minRoot}
+            onChange={(value) => updateSetting('minRoot', value)}
+            min={-30}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. корень</span>
-            <input
-              type="number"
-              min={-30}
-              max={30}
-              value={settings.maxRoot}
-              onChange={(e) =>
-                updateSetting('maxRoot', Math.max(-30, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. корень"
+            value={settings.maxRoot}
+            onChange={(value) => updateSetting('maxRoot', value)}
+            min={-30}
+            max={30}
+          />
         </div>
 
         <label className="setting-checkbox">
@@ -210,9 +196,12 @@ export function QuadraticEquationsPage() {
           Если корень один — достаточно одного числа.
         </p>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>

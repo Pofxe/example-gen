@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomPowerSettings } from '../utils/randomSettings';
 import {
   DEFAULT_POWER_SETTINGS,
   POWER_MODES,
@@ -21,6 +25,12 @@ export function PowersPage() {
   const [settings, setSettings] = useState<PowerSettings>(DEFAULT_POWER_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomPowerSettings);
 
   const updateSetting = <K extends keyof PowerSettings>(
     key: K,
@@ -31,18 +41,19 @@ export function PowersPage() {
 
   const handleGenerate = async () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
-    if (settings.minBase > settings.maxBase) {
+    if (activeSettings.minBase > activeSettings.maxBase) {
       setGenerateError('Минимальное основание не может быть больше максимального');
       return;
     }
-    if (settings.minExponent > settings.maxExponent) {
+    if (activeSettings.minExponent > activeSettings.maxExponent) {
       setGenerateError('Минимальный показатель не может быть больше максимального');
       return;
     }
 
     const { generatePowerProblems } = await import('../topics/powers/generator');
-    const problems = generatePowerProblems(settings);
+    const problems = generatePowerProblems(activeSettings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -115,83 +126,53 @@ export function PowersPage() {
         </label>
 
         <div className="settings-grid">
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. основание</span>
-            <input
-              type="number"
-              min={2}
-              max={20}
-              value={settings.minBase}
-              onChange={(e) =>
-                updateSetting('minBase', Math.max(2, Math.min(20, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. основание"
+            value={settings.minBase}
+            onChange={(value) => updateSetting('minBase', value)}
+            min={2}
+            max={20}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. основание</span>
-            <input
-              type="number"
-              min={2}
-              max={20}
-              value={settings.maxBase}
-              onChange={(e) =>
-                updateSetting('maxBase', Math.max(2, Math.min(20, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. основание"
+            value={settings.maxBase}
+            onChange={(value) => updateSetting('maxBase', value)}
+            min={2}
+            max={20}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. показатель</span>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={settings.minExponent}
-              onChange={(e) =>
-                updateSetting('minExponent', Math.max(1, Math.min(10, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. показатель"
+            value={settings.minExponent}
+            onChange={(value) => updateSetting('minExponent', value)}
+            min={1}
+            max={10}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. показатель</span>
-            <input
-              type="number"
-              min={1}
-              max={10}
-              value={settings.maxExponent}
-              onChange={(e) =>
-                updateSetting('maxExponent', Math.max(1, Math.min(10, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. показатель"
+            value={settings.maxExponent}
+            onChange={(value) => updateSetting('maxExponent', value)}
+            min={1}
+            max={10}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. результат</span>
-            <input
-              type="number"
-              min={10}
-              max={100000}
-              value={settings.maxResult}
-              onChange={(e) =>
-                updateSetting('maxResult', Math.max(10, Math.min(100000, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. результат"
+            value={settings.maxResult}
+            onChange={(value) => updateSetting('maxResult', value)}
+            min={10}
+            max={100000}
+          />
         </div>
 
         <label className="setting-checkbox">
@@ -217,9 +198,12 @@ export function PowersPage() {
           В остальных заданиях — целое число (показатель, основание или значение степени).
         </p>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>

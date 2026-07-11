@@ -1,8 +1,12 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
 import { generateArithmeticProblems } from '../topics/arithmetic/generator';
 import { checkAnswer } from '../topics/arithmetic/evaluator';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomArithmeticSettings } from '../utils/randomSettings';
 import {
   DEFAULT_ARITHMETIC_SETTINGS,
   type ArithmeticOperation,
@@ -29,6 +33,12 @@ export function ArithmeticPage() {
   const [settings, setSettings] = useState<ArithmeticSettings>(DEFAULT_ARITHMETIC_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomArithmeticSettings);
 
   const updateSetting = <K extends keyof ArithmeticSettings>(
     key: K,
@@ -61,17 +71,18 @@ export function ArithmeticPage() {
 
   const handleGenerate = () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
-    if (settings.minValue > settings.maxValue) {
+    if (activeSettings.minValue > activeSettings.maxValue) {
       setGenerateError('Минимум не может быть больше максимума');
       return;
     }
-    if (settings.allowedOperations.length === 0) {
+    if (activeSettings.allowedOperations.length === 0) {
       setGenerateError('Выберите хотя бы одну операцию');
       return;
     }
 
-    const problems = generateArithmeticProblems(settings);
+    const problems = generateArithmeticProblems(activeSettings);
     if (problems.length === 0) {
       setGenerateError(
         'Не удалось сгенерировать примеры с текущими настройками. Попробуйте изменить параметры.',
@@ -143,37 +154,26 @@ export function ArithmeticPage() {
             />
           </label>
 
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Минимальное значение</span>
-            <input
-              type="number"
-              value={settings.minValue}
-              disabled={!settings.allowNegatives}
-              onChange={(e) => updateSetting('minValue', Number(e.target.value))}
-            />
-          </label>
+          <SettingNumberInput
+            label="Минимальное значение"
+            value={settings.minValue}
+            onChange={(value) => updateSetting('minValue', value)}
+            disabled={!settings.allowNegatives}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Максимальное значение</span>
-            <input
-              type="number"
-              value={settings.maxValue}
-              onChange={(e) => updateSetting('maxValue', Number(e.target.value))}
-            />
-          </label>
+          <SettingNumberInput
+            label="Максимальное значение"
+            value={settings.maxValue}
+            onChange={(value) => updateSetting('maxValue', value)}
+          />
         </div>
 
         <label className="setting-checkbox">
@@ -225,9 +225,12 @@ export function ArithmeticPage() {
           </div>
         </fieldset>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>

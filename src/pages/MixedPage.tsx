@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomMixedSettings } from '../utils/randomSettings';
 import { checkMixedProblemAnswer } from '../topics/mixed/checker';
 import { generateMixedProblems } from '../topics/mixed/generator';
 import {
@@ -23,6 +27,12 @@ export function MixedPage() {
   const [settings, setSettings] = useState<MixedSettings>(DEFAULT_MIXED_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomMixedSettings);
 
   const updateSetting = <K extends keyof MixedSettings>(key: K, value: MixedSettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -41,18 +51,19 @@ export function MixedPage() {
 
   const handleGenerate = () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
-    if (settings.selectedTopics.length === 0) {
+    if (activeSettings.selectedTopics.length === 0) {
       setGenerateError('Выберите хотя бы одну тему');
       return;
     }
 
-    if (settings.problemsCount < 1) {
+    if (activeSettings.problemsCount < 1) {
       setGenerateError('Количество примеров должно быть не меньше 1');
       return;
     }
 
-    const problems = generateMixedProblems(settings);
+    const problems = generateMixedProblems(activeSettings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -115,18 +126,13 @@ export function MixedPage() {
         <h2 className="settings-panel__title">Настройки</h2>
 
         <div className="settings-grid">
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(50, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={50}
+          />
 
           <label className="setting-field">
             <span className="setting-field__label">Распределение по темам</span>
@@ -210,9 +216,12 @@ export function MixedPage() {
           <span>Показывать тему у каждого примера</span>
         </label>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>

@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomIdentitySettings } from '../utils/randomSettings';
 import {
   DEFAULT_IDENTITY_SETTINGS,
   IDENTITY_MODES,
@@ -21,6 +25,12 @@ export function IdentitiesPage() {
   const [settings, setSettings] = useState<IdentitySettings>(DEFAULT_IDENTITY_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomIdentitySettings);
 
   const updateSetting = <K extends keyof IdentitySettings>(
     key: K,
@@ -31,14 +41,15 @@ export function IdentitiesPage() {
 
   const handleGenerate = async () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
-    if (settings.minValue > settings.maxValue) {
+    if (activeSettings.minValue > activeSettings.maxValue) {
       setGenerateError('Минимальное значение не может быть больше максимального');
       return;
     }
 
     const { generateIdentityProblems } = await import('../topics/identities/generator');
-    const problems = generateIdentityProblems(settings);
+    const problems = generateIdentityProblems(activeSettings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -111,44 +122,29 @@ export function IdentitiesPage() {
         </label>
 
         <div className="settings-grid">
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. значение</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.minValue}
-              onChange={(e) =>
-                updateSetting('minValue', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. значение"
+            value={settings.minValue}
+            onChange={(value) => updateSetting('minValue', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. значение</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.maxValue}
-              onChange={(e) =>
-                updateSetting('maxValue', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. значение"
+            value={settings.maxValue}
+            onChange={(value) => updateSetting('maxValue', value)}
+            min={1}
+            max={30}
+          />
         </div>
 
         <label className="setting-checkbox">
@@ -164,9 +160,12 @@ export function IdentitiesPage() {
           Для указания степени используется знак <code>^</code>.
         </p>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>

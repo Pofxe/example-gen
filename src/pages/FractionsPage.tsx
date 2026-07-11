@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomFractionSettings } from '../utils/randomSettings';
 import {
   DEFAULT_FRACTION_SETTINGS,
   FRACTION_MODES,
@@ -22,6 +26,12 @@ export function FractionsPage() {
   const [settings, setSettings] = useState<FractionSettings>(DEFAULT_FRACTION_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomFractionSettings);
 
   const updateSetting = <K extends keyof FractionSettings>(
     key: K,
@@ -32,9 +42,10 @@ export function FractionsPage() {
 
   const handleGenerate = async () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
     const { generateFractionProblems } = await import('../topics/fractions/generator');
-    const problems = generateFractionProblems(settings);
+    const problems = generateFractionProblems(activeSettings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -125,70 +136,45 @@ export function FractionsPage() {
             />
           </label>
 
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. знаменатель</span>
-            <input
-              type="number"
-              min={2}
-              max={50}
-              value={settings.maxDenominator}
-              onChange={(e) =>
-                updateSetting('maxDenominator', Math.max(2, Math.min(50, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. знаменатель"
+            value={settings.maxDenominator}
+            onChange={(value) => updateSetting('maxDenominator', value)}
+            min={2}
+            max={50}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. числитель</span>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={settings.maxNumerator}
-              onChange={(e) =>
-                updateSetting('maxNumerator', Math.max(1, Math.min(50, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. числитель"
+            value={settings.maxNumerator}
+            onChange={(value) => updateSetting('maxNumerator', value)}
+            min={1}
+            max={50}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. целая часть</span>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={settings.maxWhole}
-              onChange={(e) =>
-                updateSetting('maxWhole', Math.max(1, Math.min(20, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. целая часть"
+            value={settings.maxWhole}
+            onChange={(value) => updateSetting('maxWhole', value)}
+            min={1}
+            max={20}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Знаков после запятой</span>
-            <input
-              type="number"
-              min={1}
-              max={4}
-              value={settings.decimalPlaces}
-              onChange={(e) =>
-                updateSetting('decimalPlaces', Math.max(1, Math.min(4, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Знаков после запятой"
+            value={settings.decimalPlaces}
+            onChange={(value) => updateSetting('decimalPlaces', value)}
+            min={1}
+            max={4}
+          />
         </div>
 
         <label className="setting-checkbox">
@@ -214,9 +200,12 @@ export function FractionsPage() {
           Для сравнения: <code>&lt;</code>, <code>&gt;</code> или <code>=</code>.
         </p>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>

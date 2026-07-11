@@ -328,6 +328,23 @@ body {
   width: 100%;
 }
 
+.generate-settings-block {
+  margin-top: 8px;
+}
+
+.generate-settings-block__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.generate-settings-block__actions .btn--generate {
+  margin-top: 0;
+  flex: 1;
+  min-width: 180px;
+}
+
 /* Problem slider */
 .problem-slider {
   background: var(--surface);

@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomLinearEquationSettings } from '../utils/randomSettings';
 import {
   DEFAULT_LINEAR_EQUATION_SETTINGS,
   LINEAR_EQUATION_MODES,
@@ -23,6 +27,12 @@ export function LinearEquationsPage() {
   );
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomLinearEquationSettings);
 
   const updateSetting = <K extends keyof LinearEquationSettings>(
     key: K,
@@ -33,12 +43,13 @@ export function LinearEquationsPage() {
 
   const handleGenerate = async () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
-    if (settings.minCoeff > settings.maxCoeff) {
+    if (activeSettings.minCoeff > activeSettings.maxCoeff) {
       setGenerateError('Мин. коэффициент не может быть больше максимального');
       return;
     }
-    if (settings.minConstant > settings.maxConstant) {
+    if (activeSettings.minConstant > activeSettings.maxConstant) {
       setGenerateError('Мин. число не может быть больше максимального');
       return;
     }
@@ -46,7 +57,7 @@ export function LinearEquationsPage() {
     const { generateLinearEquationProblems } = await import(
       '../topics/linear-equations/generator'
     );
-    const problems = generateLinearEquationProblems(settings);
+    const problems = generateLinearEquationProblems(activeSettings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -119,70 +130,45 @@ export function LinearEquationsPage() {
         </label>
 
         <div className="settings-grid">
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. коэффициент при x</span>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={settings.minCoeff}
-              onChange={(e) =>
-                updateSetting('minCoeff', Math.max(1, Math.min(20, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. коэффициент при x"
+            value={settings.minCoeff}
+            onChange={(value) => updateSetting('minCoeff', value)}
+            min={1}
+            max={20}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. коэффициент при x</span>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={settings.maxCoeff}
-              onChange={(e) =>
-                updateSetting('maxCoeff', Math.max(1, Math.min(20, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. коэффициент при x"
+            value={settings.maxCoeff}
+            onChange={(value) => updateSetting('maxCoeff', value)}
+            min={1}
+            max={20}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. свободный член</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={settings.minConstant}
-              onChange={(e) =>
-                updateSetting('minConstant', Math.max(0, Math.min(100, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. свободный член"
+            value={settings.minConstant}
+            onChange={(value) => updateSetting('minConstant', value)}
+            min={0}
+            max={100}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. свободный член</span>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={settings.maxConstant}
-              onChange={(e) =>
-                updateSetting('maxConstant', Math.max(1, Math.min(100, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. свободный член"
+            value={settings.maxConstant}
+            onChange={(value) => updateSetting('maxConstant', value)}
+            min={1}
+            max={100}
+          />
         </div>
 
         <label className="setting-checkbox">
@@ -207,9 +193,12 @@ export function LinearEquationsPage() {
           Все уравнения имеют целое решение. В ответе введите значение <code>x</code>.
         </p>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>

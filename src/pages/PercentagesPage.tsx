@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomPercentSettings } from '../utils/randomSettings';
 import {
   DEFAULT_PERCENT_SETTINGS,
   PERCENT_MODES,
@@ -22,6 +26,12 @@ export function PercentagesPage() {
   const [settings, setSettings] = useState<PercentSettings>(DEFAULT_PERCENT_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomPercentSettings);
 
   const updateSetting = <K extends keyof PercentSettings>(
     key: K,
@@ -32,18 +42,19 @@ export function PercentagesPage() {
 
   const handleGenerate = async () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
-    if (settings.minPercent > settings.maxPercent) {
+    if (activeSettings.minPercent > activeSettings.maxPercent) {
       setGenerateError('Минимальный процент не может быть больше максимального');
       return;
     }
-    if (settings.minNumber > settings.maxNumber) {
+    if (activeSettings.minNumber > activeSettings.maxNumber) {
       setGenerateError('Минимум числа не может быть больше максимума');
       return;
     }
 
     const { generatePercentProblems } = await import('../topics/percentages/generator');
-    const problems = generatePercentProblems(settings);
+    const problems = generatePercentProblems(activeSettings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -134,77 +145,49 @@ export function PercentagesPage() {
             />
           </label>
 
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. процент (%)</span>
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={settings.minPercent}
-              onChange={(e) =>
-                updateSetting('minPercent', Math.max(1, Math.min(200, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. процент (%)"
+            value={settings.minPercent}
+            onChange={(value) => updateSetting('minPercent', value)}
+            min={1}
+            max={200}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. процент (%)</span>
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={settings.maxPercent}
-              onChange={(e) =>
-                updateSetting('maxPercent', Math.max(1, Math.min(200, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. процент (%)"
+            value={settings.maxPercent}
+            onChange={(value) => updateSetting('maxPercent', value)}
+            min={1}
+            max={200}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. число</span>
-            <input
-              type="number"
-              value={settings.minNumber}
-              onChange={(e) => updateSetting('minNumber', Number(e.target.value))}
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. число"
+            value={settings.minNumber}
+            onChange={(value) => updateSetting('minNumber', value)}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. число</span>
-            <input
-              type="number"
-              value={settings.maxNumber}
-              onChange={(e) =>
-                updateSetting('maxNumber', Number(e.target.value))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. число"
+            value={settings.maxNumber}
+            onChange={(value) => updateSetting('maxNumber', value)}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Знаков после запятой</span>
-            <input
-              type="number"
-              min={0}
-              max={3}
-              value={settings.decimalPlaces}
-              onChange={(e) =>
-                updateSetting('decimalPlaces', Math.max(0, Math.min(3, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Знаков после запятой"
+            value={settings.decimalPlaces}
+            onChange={(value) => updateSetting('decimalPlaces', value)}
+            min={0}
+            max={3}
+          />
         </div>
 
         <label className="setting-checkbox">
@@ -239,9 +222,12 @@ export function PercentagesPage() {
           Для дроби — <code>1/4</code>.
         </p>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>

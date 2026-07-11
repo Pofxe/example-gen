@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ProblemSlider } from '../components/ProblemSlider';
+import { SettingNumberInput } from '../components/SettingNumberInput';
+import { GenerateSettingsActions } from '../components/GenerateSettingsActions';
+import { useRandomSettingsOnGenerate } from '../hooks/useRandomSettingsOnGenerate';
+import { randomRootSettings } from '../utils/randomSettings';
 import {
   DEFAULT_ROOT_SETTINGS,
   ROOT_MODES,
@@ -22,6 +26,12 @@ export function RootsPage() {
   const [settings, setSettings] = useState<RootSettings>(DEFAULT_ROOT_SETTINGS);
   const [session, setSession] = useState<ProblemSession>(EMPTY_SESSION);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const {
+    useRandomSettings,
+    setUseRandomSettings,
+    applyRandomSettings,
+    resolveSettingsForGenerate,
+  } = useRandomSettingsOnGenerate(settings, setSettings, randomRootSettings);
 
   const updateSetting = <K extends keyof RootSettings>(
     key: K,
@@ -32,14 +42,15 @@ export function RootsPage() {
 
   const handleGenerate = async () => {
     setGenerateError(null);
+    const activeSettings = resolveSettingsForGenerate();
 
-    if (settings.minValue > settings.maxValue) {
+    if (activeSettings.minValue > activeSettings.maxValue) {
       setGenerateError('Минимальное значение не может быть больше максимального');
       return;
     }
 
     const { generateRootProblems } = await import('../topics/roots/generator');
-    const problems = generateRootProblems(settings);
+    const problems = generateRootProblems(activeSettings);
 
     if (problems.length === 0) {
       setGenerateError(
@@ -112,44 +123,29 @@ export function RootsPage() {
         </label>
 
         <div className="settings-grid">
-          <label className="setting-field">
-            <span className="setting-field__label">Количество примеров</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.problemsCount}
-              onChange={(e) =>
-                updateSetting('problemsCount', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Количество примеров"
+            value={settings.problemsCount}
+            onChange={(value) => updateSetting('problemsCount', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Мин. значение корня</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.minValue}
-              onChange={(e) =>
-                updateSetting('minValue', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Мин. значение корня"
+            value={settings.minValue}
+            onChange={(value) => updateSetting('minValue', value)}
+            min={1}
+            max={30}
+          />
 
-          <label className="setting-field">
-            <span className="setting-field__label">Макс. значение корня</span>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              value={settings.maxValue}
-              onChange={(e) =>
-                updateSetting('maxValue', Math.max(1, Math.min(30, Number(e.target.value))))
-              }
-            />
-          </label>
+          <SettingNumberInput
+            label="Макс. значение корня"
+            value={settings.maxValue}
+            onChange={(value) => updateSetting('maxValue', value)}
+            min={1}
+            max={30}
+          />
 
           <label className="setting-field">
             <span className="setting-field__label">Вид корней</span>
@@ -178,9 +174,12 @@ export function RootsPage() {
           Примеры только с целыми корнями. Для сравнения вводите <code>&lt;</code>, <code>&gt;</code> или <code>=</code>.
         </p>
 
-        <button type="button" className="btn btn--primary btn--generate" onClick={handleGenerate}>
-          Сгенерировать
-        </button>
+        <GenerateSettingsActions
+          useRandomSettings={useRandomSettings}
+          onUseRandomSettingsChange={setUseRandomSettings}
+          onApplyRandomSettings={applyRandomSettings}
+          onGenerate={handleGenerate}
+        />
 
         {generateError && <p className="settings-panel__error">{generateError}</p>}
       </section>
