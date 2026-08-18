@@ -21,15 +21,89 @@ const OP_SYMBOLS: Record<ArithmeticOperation, string> = {
   '/': '÷',
 };
 
-function pickOperation(allowed: ArithmeticOperation[]): ArithmeticOperation {
-  return allowed[randomInt(0, allowed.length - 1)];
+/** Максимальный операнд для умножения (трёхзначные) и деления (двухзначные) */
+const MULTIPLY_MAX_OPERAND = 999;
+const DIVIDE_MAX_OPERAND = 99;
+
+function shuffle<T>(items: T[]): T[] {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = randomInt(0, i);
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
 }
 
-function pickRandomOperations(
+/** Равномерное распределение операций: каждая разрешённая встречается примерно одинаково */
+function pickBalancedOperations(
   count: number,
   allowed: ArithmeticOperation[],
 ): ArithmeticOperation[] {
-  return Array.from({ length: count }, () => pickOperation(allowed));
+  if (count === 0 || allowed.length === 0) return [];
+
+  const base = Math.floor(count / allowed.length);
+  const remainder = count % allowed.length;
+  const extraOps = new Set(shuffle([...allowed]).slice(0, remainder));
+
+  const operations: ArithmeticOperation[] = [];
+  for (const op of allowed) {
+    const copies = base + (extraOps.has(op) ? 1 : 0);
+    for (let i = 0; i < copies; i++) {
+      operations.push(op);
+    }
+  }
+
+  return shuffle(operations);
+}
+
+function getOperandMaxForIndex(
+  index: number,
+  operations: ArithmeticOperation[],
+  settings: ArithmeticSettings,
+): number {
+  const { min, max } = getOperandRange(settings);
+  let operandMax = max;
+
+  const leftOp = index > 0 ? operations[index - 1] : null;
+  const rightOp = index < operations.length ? operations[index] : null;
+
+  if (leftOp === '*' || rightOp === '*') {
+    operandMax = Math.min(operandMax, MULTIPLY_MAX_OPERAND);
+  }
+  if (leftOp === '/' || rightOp === '/') {
+    operandMax = Math.min(operandMax, DIVIDE_MAX_OPERAND);
+  }
+
+  return Math.max(min, operandMax);
+}
+
+function generateOperandsForOperations(
+  operations: ArithmeticOperation[],
+  settings: ArithmeticSettings,
+): number[] {
+  return Array.from({ length: operations.length + 1 }, (_, index) => {
+    const { min } = getOperandRange(settings);
+    const max = getOperandMaxForIndex(index, operations, settings);
+
+    if (index > 0 && operations[index - 1] === '/') {
+      return randomInt(Math.max(1, min), max);
+    }
+
+    return randomInt(min, max);
+  });
+}
+
+function buildFlatPartWithOperations(
+  operations: ArithmeticOperation[],
+  settings: ArithmeticSettings,
+): FlatPart {
+  const numbers = generateOperandsForOperations(operations, settings);
+  return { numbers, operations };
+}
+
+function buildFlatPart(operationsCount: number, settings: ArithmeticSettings): FlatPart {
+  const operations = pickBalancedOperations(operationsCount, settings.allowedOperations);
+  return buildFlatPartWithOperations(operations, settings);
 }
 
 function applyOp(a: number, op: ArithmeticOperation, b: number): number | null {
@@ -47,15 +121,6 @@ function applyOp(a: number, op: ArithmeticOperation, b: number): number | null {
   }
 }
 
-function buildFlatPart(operationsCount: number, settings: ArithmeticSettings): FlatPart {
-  const { min, max } = getOperandRange(settings);
-  const operations = pickRandomOperations(operationsCount, settings.allowedOperations);
-  const numbers = Array.from({ length: operationsCount + 1 }, () =>
-    randomInt(min, max),
-  );
-  return { numbers, operations };
-}
-
 function buildFlatProblem(settings: ArithmeticSettings): ArithmeticProblem | null {
   const { numbers, operations } = buildFlatPart(settings.operationsCount, settings);
   const answer = evaluateFlat(numbers, operations);
@@ -64,24 +129,31 @@ function buildFlatProblem(settings: ArithmeticSettings): ArithmeticProblem | nul
 }
 
 function buildGroupedProblem(settings: ArithmeticSettings): ArithmeticProblem | null {
-  const innerOps = settings.operationsCount - 1;
-  const leftOpsCount = randomInt(0, innerOps);
-  const rightOpsCount = innerOps - leftOpsCount;
+  const allOperations = pickBalancedOperations(
+    settings.operationsCount,
+    settings.allowedOperations,
+  );
+  if (allOperations.length === 0) return null;
 
-  if (leftOpsCount === 0 && rightOpsCount === 0) return null;
+  const outerIndex = randomInt(0, allOperations.length - 1);
+  const outerOp = allOperations[outerIndex];
+  const innerOperations = allOperations.filter((_, index) => index !== outerIndex);
 
-  const op = pickOperation(settings.allowedOperations);
-  const left = buildFlatPart(leftOpsCount, settings);
-  const right = buildFlatPart(rightOpsCount, settings);
+  const leftOpsCount = randomInt(0, innerOperations.length);
+  const leftOperations = innerOperations.slice(0, leftOpsCount);
+  const rightOperations = innerOperations.slice(leftOpsCount);
+
+  const left = buildFlatPartWithOperations(leftOperations, settings);
+  const right = buildFlatPartWithOperations(rightOperations, settings);
 
   const leftVal = evaluateFlat(left.numbers, left.operations);
   const rightVal = evaluateFlat(right.numbers, right.operations);
   if (leftVal === null || rightVal === null) return null;
 
-  const answer = applyOp(leftVal, op, rightVal);
+  const answer = applyOp(leftVal, outerOp, rightVal);
   if (answer === null || !Number.isInteger(answer)) return null;
 
-  return { kind: 'grouped', left, op, right, answer };
+  return { kind: 'grouped', left, op: outerOp, right, answer };
 }
 
 function formatGrouped(problem: Extract<ArithmeticProblem, { kind: 'grouped' }>): string {

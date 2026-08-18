@@ -7,6 +7,9 @@ import {
   evaluateFlat,
 } from './evaluator';
 
+const MULTIPLY_MAX_OPERAND = 999;
+const DIVIDE_MAX_OPERAND = 99;
+
 export interface FlatPart {
   numbers: number[];
   operations: ArithmeticOperation[];
@@ -19,6 +22,39 @@ export type ArithmeticProblem =
 export interface ValidationResult {
   valid: boolean;
   reason?: string;
+}
+
+function validateOperandForOperation(
+  value: number,
+  op: ArithmeticOperation,
+  role: 'left' | 'right',
+): ValidationResult {
+  if (op === '*' && Math.abs(value) > MULTIPLY_MAX_OPERAND) {
+    return { valid: false, reason: 'Операнд умножения превышает три знака' };
+  }
+  if (op === '/') {
+    if (role === 'right' && value === 0) {
+      return { valid: false, reason: 'Деление на ноль' };
+    }
+    if (Math.abs(value) > DIVIDE_MAX_OPERAND) {
+      return { valid: false, reason: 'Операнд деления превышает два знака' };
+    }
+  }
+  return { valid: true };
+}
+
+function validateOperandsForOperations(
+  numbers: number[],
+  operations: ArithmeticOperation[],
+): ValidationResult {
+  for (let i = 0; i < operations.length; i++) {
+    const op = operations[i];
+    const leftCheck = validateOperandForOperation(numbers[i], op, 'left');
+    if (!leftCheck.valid) return leftCheck;
+    const rightCheck = validateOperandForOperation(numbers[i + 1], op, 'right');
+    if (!rightCheck.valid) return rightCheck;
+  }
+  return { valid: true };
 }
 
 function validateOperands(
@@ -73,6 +109,9 @@ function validateFlatPart(
 
   const operandsCheck = validateOperands(part.numbers, settings);
   if (!operandsCheck.valid) return operandsCheck;
+
+  const operationOperandsCheck = validateOperandsForOperations(part.numbers, part.operations);
+  if (!operationOperandsCheck.valid) return operationOperandsCheck;
 
   const intermediates = collectFlatIntermediateResults(part.numbers, part.operations);
   const interCheck = validateIntermediates(intermediates, settings);
@@ -153,6 +192,11 @@ export function validateArithmeticProblem(
     if (leftVal === null || rightVal === null) {
       return { valid: false, reason: 'Выражение нерешаемо' };
     }
+
+    const outerOperandsCheck = validateOperandForOperation(leftVal, op, 'left');
+    if (!outerOperandsCheck.valid) return outerOperandsCheck;
+    const outerRightCheck = validateOperandForOperation(rightVal, op, 'right');
+    if (!outerRightCheck.valid) return outerRightCheck;
 
     const combined = applyOperation(leftVal, op, rightVal);
     if (combined === null || !Number.isInteger(combined)) {
